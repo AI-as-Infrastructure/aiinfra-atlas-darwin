@@ -1,0 +1,271 @@
+# Staging Environment Configuration for ATLAS Load Testing
+
+# Environment Settings
+environment:
+  name: "staging"
+  host: "${VITE_API_URL}"  # Uses VITE_API_URL from .env.staging
+  api_version: "v1"
+
+# Authentication Configuration
+# Load tests assume VITE_USE_COGNITO_AUTH=false in .env files
+
+# Redis Configuration
+redis:
+  url: "${REDIS_URL}"
+  password: "${REDIS_PASSWORD}"
+  queue_name: "llm_request_queue"
+  ttl: 3600  # 1 hour
+
+# Load Testing Parameters
+load_test:
+  # User Distribution (percentages should sum to 100)
+  user_distribution:
+    question_users: 70      # Users primarily asking questions
+    feedback_users: 20      # Users primarily giving feedback
+    mixed_users: 10         # Users doing both
+    websocket_users: 0      # WebSocket connections (disabled for realistic test)
+    async_users: 0          # Async processing users (disabled for realistic test)
+  
+  # Load Patterns - Optimized for 15 concurrent users with realistic behavior
+  load_patterns:
+    ramp_up:
+      start_users: 1
+      end_users: 15
+      duration: "3m"        # Gradual ramp up to prevent overwhelming
+    
+    sustained:
+      users: 15
+      duration: "30m"       # Sustained realistic load for 15 users
+    
+    peak:
+      users: 20             # Peak load stress testing
+      duration: "10m"       # Longer peak period for stress testing
+    
+    burst:
+      users: 25             # Burst load testing limits
+      duration: "5m"        # Short burst to test breaking point
+    
+    ramp_down:
+      start_users: 15
+      end_users: 0
+      duration: "2m"
+  
+  # Realistic User Behavior Patterns - Optimized for 15 concurrent users
+  user_behavior:
+    think_time:
+      min: 60000            # 1 minute minimum between questions
+      max: 300000           # 5 minutes maximum between questions
+      distribution: "normal" # Normal distribution around average
+      average: 180000       # 3 minutes average think time
+    
+    reading_time:
+      base_wpm: 200         # 200 words per minute (academic reading)
+      citation_bonus: 10000 # 10 seconds per citation review
+      min_reading: 10000    # 10 seconds minimum reading time
+      max_reading: 300000   # 5 minutes maximum reading time
+    
+    session_duration:
+      min: 300000           # 5 minutes minimum session
+      max: 1800000          # 30 minutes maximum session
+      average: 900000       # 15 minutes average session
+    
+    questions_per_session:
+      min: 1
+      max: 8
+      average: 3            # Average 3 questions per session
+    
+    natural_pauses:
+      enabled: true
+      probability: 0.3      # 30% chance of longer pause
+      duration: 300000      # 5 minute pause (user distraction)
+  
+  # Performance Targets - Optimized for Google Gemini 2.0 with realistic expectations
+  performance_targets:
+    response_time_p50: 14000  # ms (14s P50 for complete response)
+    response_time_p95: 20000  # ms (20s P95 for complete response)
+    response_time_p99: 25000  # ms (25s P99 for complete response)
+    error_rate_max: 3.0       # percentage (3% max error rate)
+    throughput_min: 0.5       # requests per second (realistic with reading time)
+    
+    # Streaming specific targets - optimized for Gemini 2.0
+    streaming_first_token_p50: 4000   # ms (4s P50 for first token)
+    streaming_first_token_p95: 6000   # ms (6s P95 for first token)
+    streaming_total_time_p50: 14000   # ms (14s P50 for complete response)
+    streaming_total_time_p95: 20000   # ms (20s P95 for complete response)
+    
+    # WebSocket targets
+    websocket_connection_time_max: 1000  # ms
+    websocket_error_rate_max: 2.0        # percentage
+    
+    # Redis/Async targets
+    async_processing_time_max: 30000     # ms
+    redis_queue_depth_max: 100           # requests
+    
+    # Evaluation thresholds for pass/fail/borderline assessment
+    # Realistic thresholds for 15 concurrent users with proper behavior
+    success_rate:
+      pass_threshold: 97.0        # 97%+ success rate required
+      borderline_threshold: 95.0  # 95-97% is borderline
+    
+    error_rate:
+      pass_threshold: 3.0         # <3% error rate required
+      borderline_threshold: 5.0   # 3-5% is borderline
+    
+    avg_response_time:
+      pass_threshold: 16000       # <16s average response time
+      borderline_threshold: 20000 # 16-20s is borderline
+    
+    p95_response_time:
+      pass_threshold: 20000       # <20s P95 response time
+      borderline_threshold: 25000 # 20-25s is borderline
+    
+    first_token_time_p95:
+      pass_threshold: 6000        # <6s P95 first token time
+      borderline_threshold: 8000  # 6-8s is borderline
+    
+    requests_per_second:
+      pass_threshold: 0.4         # >0.4 RPS realistic with reading time
+      borderline_threshold: 0.3   # 0.3-0.4 RPS is borderline
+
+# Test Data Configuration
+test_data:
+  corpus_filters:
+    - corpus: "hansard"
+      date_range:
+        start: "1900"
+        end: "2000"
+    - corpus: "hansard"
+      date_range:
+        start: "2000"
+        end: "2020"
+    - corpus: "all"
+  
+  question_types:
+    - "parliamentary_debates"
+    - "government_policy"
+    - "historical_events"
+    - "legislation"
+  
+  feedback_distribution:
+    thumbs_up: 70
+    thumbs_down: 30
+    with_comment: 25  # percentage of feedback with comments
+
+# Monitoring and Reporting
+monitoring:
+  metrics_export_interval: 30  # seconds
+  detailed_logging: true
+  export_format: "json"
+  
+  # Custom metrics collection
+  custom_metrics:
+    - "streaming_performance"
+    - "redis_queue_stats"
+    - "websocket_stability"
+    - "user_journey_completion"
+
+# Infrastructure Assumptions - 8 vCPU, 16GB RAM servers
+infrastructure:
+  backend_workers: 8              # Matching GUNICORN_WORKERS
+  redis_instances: 1
+  load_balancer: "nginx"
+  ssl_enabled: true
+  llm_max_concurrent: 30          # Matching LLM_MAX_CONCURRENT
+  websocket_max_connections: 100  # Matching WEBSOCKET_MAX_CONNECTIONS
+  
+  # Expected bottlenecks
+  expected_bottlenecks:
+    - "llm_inference"
+    - "vector_search"
+    - "redis_queue"
+    - "memory_pressure"           # Added for higher concurrency
+
+# Safety Limits
+safety:
+  max_concurrent_users: 100
+  max_test_duration: "60m"
+  circuit_breaker:
+    error_threshold: 20.0  # percentage
+    timeout_threshold: 10000  # ms
+  
+  # Rate limiting - realistic human behavior
+  rate_limits:
+    requests_per_user_per_minute: 4    # Max 4 questions per minute (realistic)
+    concurrent_connections_per_user: 2  # Reduced concurrent connections
+
+# Environment Variables (reference - loaded from .env.staging)
+env_vars:
+  VITE_API_URL: "${VITE_API_URL}"
+  VITE_USE_COGNITO_AUTH: "${VITE_USE_COGNITO_AUTH}"
+  REDIS_URL: "${REDIS_URL}"
+  REDIS_PASSWORD: "${REDIS_PASSWORD}"
+  BACKEND_LOG_LEVEL: "${BACKEND_LOG_LEVEL}"
+  CORS_ORIGINS: "${CORS_ORIGINS}"
+
+# Test Scenarios - 4-Phase Rollout for Realistic Usage Patterns
+scenarios:
+  # Phase 1: Baseline Testing (5 users, 10 min)
+  phase1_baseline:
+    description: "Phase 1: Baseline performance with 5 users - establish performance baseline"
+    duration: "10m"
+    users: 5
+    spawn_rate: 1
+    user_types: ["question_users"]
+    think_time_enabled: true
+    natural_pauses_enabled: true
+    tags: ["baseline", "phase1"]
+  
+  # Phase 2: Target Load Testing (15 users, 30 min)
+  phase2_target_load:
+    description: "Phase 2: Target load with 15 concurrent users - main test scenario"
+    duration: "30m"
+    users: 15
+    spawn_rate: 1.5
+    user_types: ["question_users", "feedback_users", "mixed_users"]
+    think_time_enabled: true
+    natural_pauses_enabled: true
+    tags: ["target", "phase2", "main"]
+  
+  # Phase 3: Stress Testing (20 users, 10 min)
+  phase3_stress_test:
+    description: "Phase 3: Stress test with 20 users - find breaking point"
+    duration: "10m"
+    users: 20
+    spawn_rate: 2
+    user_types: ["question_users", "mixed_users"]
+    think_time_enabled: true
+    reduced_think_time: true
+    tags: ["stress", "phase3"]
+  
+  # Phase 4: Endurance Testing (15 users, 60 min)
+  phase4_endurance:
+    description: "Phase 4: Endurance test with 15 users - long-term stability"
+    duration: "60m"
+    users: 15
+    spawn_rate: 1
+    user_types: ["question_users", "feedback_users", "mixed_users"]
+    think_time_enabled: true
+    natural_pauses_enabled: true
+    extended_sessions: true
+    tags: ["endurance", "phase4", "stability"]
+  
+  # Additional scenarios for specific testing
+  burst_test:
+    description: "Burst load test (25 users) - maximum capacity testing"
+    duration: "5m"
+    users: 25
+    spawn_rate: 5
+    user_types: ["question_users"]
+    think_time_enabled: false
+    tags: ["burst", "capacity"]
+  
+  realistic_usage:
+    description: "Realistic usage simulation - mixed user behavior"
+    duration: "45m"
+    users: 15
+    spawn_rate: 1.5
+    user_types: ["question_users", "feedback_users", "mixed_users"]
+    think_time_enabled: true
+    natural_pauses_enabled: true
+    extended_sessions: true
+    tags: ["realistic", "mixed"]

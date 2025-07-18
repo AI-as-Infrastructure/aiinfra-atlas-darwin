@@ -1,0 +1,47 @@
+{
+  "evolution": {
+    "status": "SUCCESS",
+    "count": 3,
+    "sample_letters": [
+      "DCP-LETT-13703",
+      "DCP-LETT-13402",
+      "DCP-LETT-10313"
+    ]
+  },
+  "species": {
+    "status": "SUCCESS",
+    "count": 3,
+    "sample_letters": [
+      "DCP-LETT-13703",
+      "DCP-LETT-7807",
+      "DCP-LETT-9791"
+    ]
+  },
+  "natural selection": {
+    "status": "SUCCESS",
+    "count": 3,
+    "sample_letters": [
+      "DCP-LETT-13703",
+      "DCP-LETT-10313",
+      "DCP-LETT-8211F"
+    ]
+  },
+  "voyage": {
+    "status": "SUCCESS",
+    "count": 3,
+    "sample_letters": [
+      "DCP-LETT-13703",
+      "DCP-LETT-13402",
+      "DCP-LETT-376"
+    ]
+  },
+  "Beagle": {
+    "status": "SUCCESS",
+    "count": 3,
+    "sample_letters": [
+      "DCP-LETT-13703",
+      "DCP-LETT-7807",
+      "DCP-LETT-13402"
+    ]
+  }
+}

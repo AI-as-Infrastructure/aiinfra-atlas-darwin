@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLAS - Logging Out</title>
+    <script>
+        // Constants for Cognito logout (will be replaced with environment values)
+        const COGNITO_LOGOUT_ENDPOINT = "__VITE_COGNITO_LOGOUT_ENDPOINT__";
+        const COGNITO_CLIENT_ID = "__VITE_COGNITO_CLIENT_ID__";
+        const COGNITO_LOGOUT_REDIRECT_URI = "__VITE_COGNITO_LOGOUT_REDIRECT_URI__";
+        const USE_COGNITO_AUTH = "__VITE_USE_COGNITO_AUTH__" === "true";
+        const API_URL = "__VITE_API_URL__" || '/';
+        
+        // Logout function - handles both Cognito and local storage clearing
+        window.onload = function() {
+            console.log('Starting logout process...');
+            
+            // Debug information about environment
+            console.log('Debug Info:');
+            console.log('- Current URL:', window.location.href);
+            console.log('- Referrer:', document.referrer);
+            console.log('- Protocol:', window.location.protocol);
+            console.log('- Cognito Auth Enabled:', USE_COGNITO_AUTH);
+            console.log('- Cognito Endpoint:', COGNITO_LOGOUT_ENDPOINT);
+            console.log('- Cognito Client ID:', COGNITO_CLIENT_ID ? '[CONFIGURED]' : '[NOT CONFIGURED]');
+            console.log('- Redirect URI:', COGNITO_LOGOUT_REDIRECT_URI);
+            
+            // Clear browser storage first
+            clearBrowserStorage();
+            
+            // Always redirect to login after clearing storage
+            // The Cognito logout already happened in amplify-auth.js
+            console.log('Local storage cleared, redirecting to login...');
+            setTimeout(function() {
+                window.location.replace('/login');
+            }, 500); // Small delay to ensure storage is cleared
+        };
+        
+        // Helper function to check if we can use Cognito logout
+        function canUseCognitoLogout() {
+            const hasCognitoConfig = COGNITO_LOGOUT_ENDPOINT && 
+                                  COGNITO_CLIENT_ID && 
+                                  COGNITO_LOGOUT_REDIRECT_URI;
+                                  
+            return USE_COGNITO_AUTH && hasCognitoConfig;
+        }
+        
+        // Helper function to clear browser storage
+        function clearBrowserStorage() {
+            // Clear localStorage auth-related keys
+            console.log('Clearing localStorage tokens...');
+            Object.keys(localStorage).forEach(function(key) {
+                if (key.indexOf("oidc.user:") === 0 || 
+                    key.indexOf("CognitoIdentityServiceProvider") === 0 ||
+                    key.indexOf("amplify-signin-with-hostedUI") === 0 ||
+                    key.indexOf("auth") === 0) {
+                    console.log('Removing localStorage key:', key);
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Clear session storage
+            console.log('Clearing sessionStorage...');
+            sessionStorage.clear();
+            
+            // Clear cookies
+            console.log('Clearing cookies...');
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+        }
+        
+        // Helper function to redirect to home
+        function redirectToHome() {
+            // Get the redirect URL from environment variable
+            let redirectUrl = API_URL || '/';
+            
+            // Match protocol if needed (enforce HTTPS if we're on HTTPS)
+            if (window.location.protocol === 'https:' && redirectUrl.startsWith('http:')) {
+                redirectUrl = redirectUrl.replace('http:', 'https:');
+                console.log('Matched redirect protocol to current (HTTPS):', redirectUrl);
+            }
+            
+            console.log('Redirecting to home:', redirectUrl);
+            window.location.replace(redirectUrl);
+        }
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .logout-container {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <h1>Logging Out...</h1>
+        <p>Clearing session data and redirecting...</p>
+    </div>
+</body>
+</html> 

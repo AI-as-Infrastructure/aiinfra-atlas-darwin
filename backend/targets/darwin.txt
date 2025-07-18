@@ -1,0 +1,49 @@
+Darwin Corpus Vector Store Creation Statistics
+============================================
+
+Collection: darwin
+Created: 2025-07-18 14:24:00
+
+Model Information
+---------------
+Model: Livingwithmachines/bert_1760_1900
+Embedding Dimension: 768
+Pooling Strategy: mean
+
+Processing Configuration
+----------------------
+Text Splitter: RecursiveCharacterTextSplitter
+Chunk Size: 1500
+Chunk Overlap: 250
+Batch Size: 100
+
+Document Statistics
+------------------
+Total Letters Processed: 15,239
+Total Chunks Created: 25,813
+Total Characters: 25,241,818
+Total Words: 4,541,143
+Skipped Letters: 0
+Successful Batches: 259
+
+Average Statistics
+----------------
+Average Chunks per Letter: 1.7
+Average Characters per Chunk: 977.9
+Average Words per Chunk: 175.9
+
+Processing Statistics
+-------------------
+Total Processing Time: 272.74 seconds
+Average Time per Letter: 0.02 seconds
+Chunks per Second: 94.6
+
+System Information
+----------------
+OS: Linux #202412060638~1751390742~22.04~79b9668 SMP PREEMPT_DYNAMIC Tue J
+Python: 3.10.12
+CPU: x86_64
+CPU Cores: 32 physical, 32 logical
+RAM: 125.6 GB
+GPU: NVIDIA GeForce RTX 4070 Ti SUPER
+CUDA Version: 12.6

@@ -1,0 +1,111 @@
+# ATLAS
+config/.env.development
+config/.env.staging
+config/.env.production
+config/dev_certs
+create/txt/output/*
+letsencrypt/
+var/lib/letsencrypt/
+telemetry_span_registry.db
+*.db
+deploy/production/.atlas-deploy-config.json
+frontend/.env
+frontend/package-lock.json
+frontend/node_modules
+appendonly.aof
+dump.rdb
+deploy/certs/
+deploy/staging/logs/**
+*.key
+*.crt
+*.pem
+deploy/docker/
+create/output/*
+models/**
+models/bert_1890_1900_st/
+load_tests/reports/*
+
+# Chroma database directories - only ignore build artifacts in create/
+create/**/chroma_db/
+# Darwin XML output directory should be ignored
+create/Darwin/xml/output/
+# Backend ChromaDB files are tracked by Git LFS
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+*.whl
+
+# Node dependencies
+vue/node_modules
+vue/package-lock.json
+
+
+# misc
+.DS_Store
+.envTrim Trailing Whitespace
+
+
+npm-debug.log*
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+test-reports/
+
+# pyenv
+.python-version
+
+# Local virtual environment directories
+.venv/
+venv/
+venv.bak/
+venv.bk/
+
+# VS Code
+.vscode/
+
+# Generated files
+frontend/public/logout.html
+frontend/dist/
+
+# Load Testing Results (exclude sensitive performance data)
+load_tests/reports/
+load_tests/results/
+load_tests/*.log
+
+
