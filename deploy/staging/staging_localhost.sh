@@ -279,9 +279,7 @@ Group=$CURRENT_USER
 WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/.venv/bin"
 Environment="PYTHONPATH=$APP_DIR"
-# Pass Phoenix telemetry environment variables to the worker
-Environment="PHOENIX_CLIENT_HEADERS=$(grep PHOENIX_CLIENT_HEADERS $APP_DIR/config/.env.staging | cut -d'=' -f2-)"
-Environment="PHOENIX_PROJECT_NAME=$(grep PHOENIX_PROJECT_NAME $APP_DIR/config/.env.staging | cut -d'=' -f2-)"
+# Environment settings come from .env.staging (includes Phoenix variables)
 Environment="ENVIRONMENT=staging"
 
 # Environment settings come from .env.staging
@@ -422,11 +420,7 @@ echo "Phoenix API key: $(grep PHOENIX_CLIENT_HEADERS config/.env.staging)"
 echo "Phoenix project: $(grep PHOENIX_PROJECT_NAME config/.env.staging)"
 echo "Phoenix endpoint: $(grep PHOENIX_COLLECTOR_ENDPOINT config/.env.staging)"
 
-# Ensure Python environment has access to Phoenix variables
-cd $APP_DIR
-echo "export PHOENIX_CLIENT_HEADERS=\"$(grep PHOENIX_CLIENT_HEADERS config/.env.staging | cut -d'=' -f2-)\"" >> .venv/bin/activate
-echo "export PHOENIX_PROJECT_NAME=\"$(grep PHOENIX_PROJECT_NAME config/.env.staging | cut -d'=' -f2-)\"" >> .venv/bin/activate
-echo "export PHOENIX_COLLECTOR_ENDPOINT=\"$(grep PHOENIX_COLLECTOR_ENDPOINT config/.env.staging | cut -d'=' -f2-)\"" >> .venv/bin/activate
+# Phoenix variables are loaded from .env.staging via EnvironmentFile
 
 # 9. Set up Nginx and Gunicorn
 echo "Setting up Nginx and Gunicorn..."
