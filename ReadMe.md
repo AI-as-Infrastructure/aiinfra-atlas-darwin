@@ -80,6 +80,11 @@ ATLAS uses a simplified command structure for common operations. Here are the ma
 - `make fork-feature` - Create new feature branch
 - `make fork-pr` - Prepare branch for pull request
 
+### Darwin Fork (Divergent)
+- `make darwin-status` - Show Darwin fork analysis
+- `make darwin-sync` - Safe sync preserving Darwin features  
+- `make darwin-backup` - Backup Darwin-specific files
+
 For detailed help on any command, use:
 ```bash
 make help-<command>
@@ -145,6 +150,7 @@ This workflow ensures that your retrievers are always in sync with your vector s
 ### Development and Deployment
 - [Development Environment](docs/development.md) - Local development setup, workflow, and debugging
 - [Fork Management](docs/fork_management.md) - Managing your Darwin fork, syncing with upstream, and contributing back
+- [Darwin Divergence](docs/darwin_divergence.md) - Handling significant divergence in the Darwin fork
 - [Staging Environment](docs/staging.md) - Local staging deployment for development and testing
 - [Production Deployment](docs/production.md) - Complete production deployment guide with SSL, systemd services, and maintenance
 - [Load Testing Framework](docs/load_testing.md) - Performance testing and optimization guidelines

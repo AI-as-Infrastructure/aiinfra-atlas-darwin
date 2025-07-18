@@ -164,7 +164,126 @@ git commit -m "Updates"
 
 ## Advanced Scenarios
 
-### Handling Merge Conflicts
+## Advanced Scenarios
+
+### Handling Significant Divergent Changes
+
+Your Darwin fork has substantial differences from upstream, including:
+
+- **Darwin-specific directory structure** (`create/Darwin/`)
+- **LFS file management** (Chroma database files)
+- **Removed upstream files** (some that exist upstream but not in your fork)
+- **Modified core files** (configuration, retrieval, etc.)
+
+This level of divergence requires careful management strategies.
+
+#### Strategy 1: Selective Merging (Recommended)
+
+Instead of full syncs, cherry-pick specific improvements:
+
+```bash
+# Fetch upstream
+git fetch upstream
+
+# Review specific commits you want
+git log upstream/main --oneline -20
+
+# Cherry-pick specific improvements (example)
+git cherry-pick 7a5e494  # Sanitize error messages
+git cherry-pick 8e7751b  # Database improvements (if compatible)
+
+# Test thoroughly after each pick
+make b  # Test backend
+make f  # Test frontend
+```
+
+#### Strategy 2: Merge with Custom Resolution
+
+For larger syncs, use merge with manual conflict resolution:
+
+```bash
+# Create a backup branch first
+git checkout -b backup-before-sync
+
+# Return to main and attempt merge
+git checkout main
+git merge upstream/main
+
+# Resolve conflicts manually, preserving Darwin features:
+# - Keep your create/Darwin/ directory
+# - Keep your LFS configuration
+# - Keep Darwin-specific modifications
+# - Accept upstream improvements where compatible
+
+# Test extensively
+make fork-status  # Check result
+```
+
+#### Strategy 3: Rebase with Preserve Merges
+
+For a clean history while maintaining Darwin features:
+
+```bash
+# Interactive rebase to reorganize commits
+git rebase -i upstream/main
+
+# During rebase:
+# - Mark Darwin-specific commits as 'pick'
+# - Mark conflict-prone commits for 'edit'
+# - Allow upstream improvements to integrate cleanly
+```
+
+### Managing LFS File Conflicts
+
+Your `.gitattributes` tracks `backend/targets/chroma_db/**` with LFS, but upstream may have different database files:
+
+```bash
+# Before syncing, check LFS status
+git lfs ls-files
+
+# After sync, resolve LFS conflicts
+git lfs migrate export --include="*.sqlite3" --everything
+git lfs track "backend/targets/chroma_db/**"
+git add .gitattributes
+```
+
+### Darwin-Specific File Protection
+
+Create a script to preserve your Darwin-specific changes:
+
+```bash
+# Save this as utils/scripts/preserve-darwin.sh
+#!/bin/bash
+echo "🛡️ Protecting Darwin-specific files..."
+
+# Backup Darwin files before sync
+tar -czf darwin-backup-$(date +%Y%m%d).tar.gz \
+    create/Darwin/ \
+    backend/retrievers/darwin_retriever.py \
+    backend/targets/darwin.txt \
+    backend/targets/chroma_db/
+
+echo "✅ Darwin files backed up"
+```
+
+### Conflict Resolution Patterns
+
+**Configuration Files (`backend/modules/config.py`)**:
+- Keep Darwin-specific corpus settings
+- Accept upstream performance improvements
+- Merge new environment variable support
+
+**Database Files (`backend/targets/chroma_db/`)**:
+- Your Darwin database should take priority
+- Use LFS to manage large database files
+- Consider rebuilding database with latest upstream code + Darwin corpus
+
+**Retrieval System**:
+- Keep `darwin_retriever.py` as-is
+- Merge improvements to `base_retriever.py`
+- Update retriever registration if upstream changes interface
+
+### Merge Conflicts during Sync
 
 When syncing with upstream creates conflicts:
 
@@ -187,6 +306,49 @@ git cherry-pick <commit-hash>
 # Push to your fork
 git push origin main
 ```
+
+### Testing After Major Syncs
+
+Always test Darwin-specific functionality after syncing:
+
+```bash
+# Test Darwin vector store
+make vs
+
+# Test Darwin retriever
+make r
+
+# Test full application
+make b &
+make f
+
+# Verify Darwin corpus works
+# Query: "What did Darwin think about evolution?"
+```
+
+### When Conflicts Are Too Complex
+
+If conflicts become unmanageable:
+
+1. **Create a new integration branch**:
+   ```bash
+   git checkout -b integrate-upstream-v0.1.7
+   git merge upstream/main
+   # Resolve conflicts gradually
+   ```
+
+2. **Incremental integration**:
+   ```bash
+   # Merge specific upstream features one at a time
+   git checkout main
+   git checkout upstream/main -- backend/modules/llm.py
+   git commit -m "Update LLM module from upstream"
+   ```
+
+3. **Rebuild from scratch** (last resort):
+   - Start with fresh upstream
+   - Re-apply Darwin modifications systematically
+   - Use git patches to preserve your changes
 
 ### Reverting Problematic Syncs
 
