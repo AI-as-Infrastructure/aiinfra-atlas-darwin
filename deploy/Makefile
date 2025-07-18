@@ -84,30 +84,3 @@ lts: ## Run realistic load test against staging environment (15 concurrent users
 		.venv/bin/pip install -r config/requirements.txt; \
 	fi
 	@bash -c "cd load_tests && source ../config/.env.staging && LOAD_TEST_CONFIG=staging ../.venv/bin/locust -f locustfile.py --host=\$$VITE_API_URL --users=15 --spawn-rate=0.2 --run-time=30m --headless"
-
-
-# Help target
-help: ## Show this help message
-	@echo "ATLAS Load Testing - Available Targets:"
-	@echo ""
-	@echo "📊 LOAD TESTING:"
-	@echo "  make lts     - Staging test (15 users, 30min)"
-	@echo ""
-	@echo "🔧 DEVELOPMENT:"
-	@echo "  make b       - Start backend development server"
-	@echo "  make f       - Start frontend development server"
-	@echo "  make vs      - Create vector store"
-	@echo "  make r       - Generate retriever"
-	@echo ""
-	@echo "🚀 DEPLOYMENT:"
-	@echo "  make s       - Deploy to local staging"
-	@echo "  make p       - Deploy to production"
-	@echo "  make up      - Upgrade production"
-	@echo ""
-	@echo "💡 OPTIMIZATION FEATURES:"
-	@echo "  ✅ 100+ diverse questions with cache-busting"
-	@echo "  ✅ Realistic user behavior patterns (5 user types)"
-	@echo "  ✅ k20 fetch-k optimization (33% memory reduction)"
-	@echo "  ✅ Enhanced metrics and evaluation"
-	@echo "  ✅ Weighted corpus filter distribution"
-	@echo "  ✅ Follow-up question patterns"

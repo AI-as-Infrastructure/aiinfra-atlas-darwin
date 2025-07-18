@@ -74,6 +74,12 @@ ATLAS uses a simplified command structure for common operations. Here are the ma
 - `make r` - Generate retriever
 - `make xs` - Create XML vector store
 
+### Fork Management
+- `make fork-status` - Show fork status vs upstream
+- `make fork-sync` - Sync with upstream changes
+- `make fork-feature` - Create new feature branch
+- `make fork-pr` - Prepare branch for pull request
+
 For detailed help on any command, use:
 ```bash
 make help-<command>
@@ -138,6 +144,7 @@ This workflow ensures that your retrievers are always in sync with your vector s
 
 ### Development and Deployment
 - [Development Environment](docs/development.md) - Local development setup, workflow, and debugging
+- [Fork Management](docs/fork_management.md) - Managing your Darwin fork, syncing with upstream, and contributing back
 - [Staging Environment](docs/staging.md) - Local staging deployment for development and testing
 - [Production Deployment](docs/production.md) - Complete production deployment guide with SSL, systemd services, and maintenance
 - [Load Testing Framework](docs/load_testing.md) - Performance testing and optimization guidelines

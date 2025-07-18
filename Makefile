@@ -9,10 +9,30 @@ VENV_DIR := .venv
 FRONTEND_DIR := frontend
 BACKEND_DIR := backend
 
+# Fork Management Targets
+.PHONY: fork-status fork-sync fork-feature fork-pr
+fork-status: ## Show fork status vs upstream
+	@./utils/scripts/sync-upstream.sh status
+
+fork-sync: ## Sync with upstream changes
+	@./utils/scripts/sync-upstream.sh sync
+
+fork-feature: ## Create new feature branch (interactive)
+	@./utils/scripts/sync-upstream.sh feature
+
+fork-pr: ## Prepare current branch for pull request
+	@./utils/scripts/sync-upstream.sh pr
+
 # Help target
 .PHONY: help
 help: ## Show this help message
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Targets:"
+	@echo "🔄 Fork Management:"
+	@echo "  fork-status      Show fork status vs upstream"
+	@echo "  fork-sync        Sync with upstream changes"
+	@echo "  fork-feature     Create new feature branch"
+	@echo "  fork-pr          Prepare branch for pull request"
+	@echo ""
+	@echo "📋 All Targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
