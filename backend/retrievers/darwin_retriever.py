@@ -25,10 +25,9 @@ DIRECTION_OPTIONS = [
 # Define time period options
 TIME_PERIOD_OPTIONS = [
     {"value": "all", "label": "All Years"},
-    {"value": "1821-1840", "label": "1821-1840"},
-    {"value": "1831-1850", "label": "1831-1850"},
-    {"value": "1850-1870", "label": "1850-1870"},
-    {"value": "1870-1882", "label": "1870-1882"}
+    {"value": "1822-1859", "label": "1822–1859"},
+    {"value": "1860-1870", "label": "1860–1870"},
+    {"value": "1871-1882", "label": "1871–1882"}
 ]
 
 
