@@ -7,6 +7,16 @@ echo "🔍 Checking backend environment..."
 # Set environment
 export ENVIRONMENT=development
 
+# Load environment variables from .env.development
+if [ -f "config/.env.development" ]; then
+    echo "📄 Loading environment variables from config/.env.development..."
+    set -a  # Export all variables
+    source config/.env.development
+    set +a  # Stop exporting
+else
+    echo "❌ Warning: config/.env.development not found!"
+fi
+
 # Set default Python version if not specified
 PYTHON_VERSION=${PYTHON_VERSION:-3.10}
 
