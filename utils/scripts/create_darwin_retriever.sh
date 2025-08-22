@@ -41,7 +41,24 @@ fi
 
 # Install dependencies
 echo "📥 Installing dependencies..."
-pip install -r config/requirements.lock
+pip install --upgrade pip
+
+# If the lockfile contains CUDA-specific torch wheels (+cu), install non-torch deps first,
+# then install torch/vision/audio from the CUDA index without pinning the local '+cu' build.
+PYTORCH_INDEX_DEFAULT="https://download.pytorch.org/whl/cu124"
+PYTORCH_INDEX="${TORCH_CUDA_INDEX_URL:-$PYTORCH_INDEX_DEFAULT}"
+if grep -qE '^(torch|torchvision|torchaudio)==.*\+cu' config/requirements.lock; then
+    echo "🔧 Detected CUDA wheels in lockfile. Installing non-torch deps first..."
+    TMP_NO_TORCH=$(mktemp)
+    grep -v -E '^(torch|torchvision|torchaudio)==.*' config/requirements.lock > "$TMP_NO_TORCH"
+    pip install -r "$TMP_NO_TORCH"
+    rm -f "$TMP_NO_TORCH"
+
+    echo "🧩 Installing CUDA-enabled torch stack from: $PYTORCH_INDEX"
+    pip install --index-url "$PYTORCH_INDEX" torch torchvision torchaudio
+else
+    pip install -r config/requirements.lock
+fi
 
 # Check if Darwin retriever script exists
 if [ ! -f "create/Darwin/xml/create_darwin_retriever.py" ]; then

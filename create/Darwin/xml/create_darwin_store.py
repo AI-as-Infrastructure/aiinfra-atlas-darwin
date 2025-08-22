@@ -11,16 +11,41 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 # Standard libs
-import re, torch, json, nltk, time, subprocess, numpy as np, shutil
+import re, json, time, subprocess, shutil
 import platform
-import psutil
+try:
+    import psutil  # type: ignore
+except Exception:
+    psutil = None
 from dotenv import load_dotenv
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModel, AutoConfig
-from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.schema import Document
+try:
+    from tqdm import tqdm  # type: ignore
+except Exception:
+    def tqdm(x, **kwargs):
+        return x
+
+# Heavy ML deps (optional in lexical-only runs)
+try:
+    import numpy as np  # type: ignore
+except Exception:
+    np = None
+try:
+    import torch  # type: ignore
+except Exception:
+    torch = None
+try:
+    from transformers import AutoTokenizer, AutoModel, AutoConfig  # type: ignore
+except Exception:
+    AutoTokenizer = AutoModel = AutoConfig = None
+
+# LangChain deps (only needed when not lexical-only)
+try:
+    from langchain_community.vectorstores import Chroma  # type: ignore
+    from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter  # type: ignore
+    from langchain_huggingface import HuggingFaceEmbeddings  # type: ignore
+    from langchain.schema import Document  # type: ignore
+except Exception:
+    Chroma = RecursiveCharacterTextSplitter = CharacterTextSplitter = HuggingFaceEmbeddings = Document = None
 from typing import Dict, List, Any, Optional, Tuple
 from collections import defaultdict
 from datetime import datetime
@@ -52,85 +77,120 @@ for _env in env_candidates:
 else:
     print("[WARN] No .env.* file found under config/. Proceeding with current environment.")
 
-# Download NLTK data
+# Download NLTK data (best-effort)
 try:
-    nltk.download('punkt', quiet=True)
-    nltk.download('averaged_perceptron_tagger', quiet=True)
-except Exception as e:
-    print(f"Warning: NLTK download failed: {e}")
+    import nltk  # type: ignore
+    try:
+        nltk.download('punkt', quiet=True)
+        nltk.download('averaged_perceptron_tagger', quiet=True)
+    except Exception as e:
+        print(f"Warning: NLTK data download failed: {e}")
+except Exception:
+    nltk = None
 
-# Data paths
-LETTERS_XML_DIR = "../../../../darwin_sources_FULL/xml/letters"
-LETTERS_CSV_PATH = "../../../../darwin_sources_FULL/csv/darwin-correspondence.csv"
+# Data paths from .env configuration
+DEFAULT_FULL_XML = os.getenv("DARWIN_XML_FULL_PATH", "../../../../darwin_sources_FULL/xml/letters")
+DEFAULT_TEST_XML = os.getenv("DARWIN_XML_TEST_PATH", "../../../../darwin_sources_TEST/xml/letters")
+DEFAULT_CSV = os.getenv("DARWIN_CSV_PATH", "../../../../darwin_sources_FULL/csv/darwin-correspondence.csv")
+
+# Allow runtime overrides via legacy environment variables
+LETTERS_XML_DIR = os.getenv("DARWIN_LETTERS_XML_DIR", DEFAULT_FULL_XML)
+LETTERS_CSV_PATH = os.getenv("DARWIN_LETTERS_CSV_PATH", DEFAULT_CSV)
+
+# Resolve paths and apply TEST fallback for XML if FULL path isn't present
+def _choose_letters_dir(path: str) -> str:
+    try:
+        # If already absolute, Path will normalize; otherwise treat relative to script
+        abs_candidate = str((Path(__file__).resolve().parent / path).resolve())
+        if os.path.isdir(abs_candidate):
+            print(f"Using letters XML directory: {abs_candidate}")
+            return abs_candidate
+    except Exception:
+        pass
+    # Try a direct check (handles when env provided an absolute path)
+    if os.path.isdir(path):
+        print(f"Using letters XML directory: {path}")
+        return path
+    # Fallback to TEST if available
+    test_path = resolve_path(DEFAULT_TEST_XML)
+    if os.path.isdir(test_path):
+        print(f"[INFO] Falling back to TEST letters XML directory: {test_path}")
+        return test_path
+    print(f"[ERROR] Letters XML directory not found: {path}")
+    return path
+
+LETTERS_XML_DIR = _choose_letters_dir(LETTERS_XML_DIR)
+
+# CSV is optional; warn if missing rather than failing
+def _resolve_optional_csv(path: str) -> str:
+    try:
+        abs_candidate = str((Path(__file__).resolve().parent / path).resolve())
+        if os.path.isfile(abs_candidate):
+            print(f"Using letters CSV: {abs_candidate}")
+            return abs_candidate
+    except Exception:
+        pass
+    if os.path.isfile(path):
+        print(f"Using letters CSV: {path}")
+        return path
+    print(f"[WARN] Letters CSV not found, proceeding without: {path}")
+    return path
+
+LETTERS_CSV_PATH = _resolve_optional_csv(LETTERS_CSV_PATH)
 
 # Helper to resolve relative paths based on this script's directory
 def resolve_path(relative_path):
+    """Resolve a relative or absolute path against this script's directory."""
     script_dir = Path(__file__).resolve().parent
-    return str((script_dir / relative_path).resolve())
-
-def get_target_config():
-    """Get configuration from the target file."""
     try:
-        # First get the collection name from environment
-        collection_name = os.getenv('CHROMA_COLLECTION_NAME', 'darwin')
-        
-        target_file = os.path.join('backend', 'targets', f'{collection_name}.txt')
-        if not os.path.exists(target_file):
-            print(f"Warning: Target file {target_file} not found, using defaults")
-            return {
-                'COLLECTION_NAME': collection_name,
-                'CHUNK_SIZE': 1500,
-                'CHUNK_OVERLAP': 250,
-                'TEXT_SPLITTER_TYPE': 'RecursiveCharacterTextSplitter'
-            }
-            
-        with open(target_file, 'r') as f:
-            content = f.read()
-            
-        # Extract configuration values
-        chunk_size = re.search(r'CHUNK_SIZE\s*=\s*(\d+)', content)
-        chunk_overlap = re.search(r'CHUNK_OVERLAP\s*=\s*(\d+)', content)
-        text_splitter = re.search(r'Text Splitter:\s*(\w+)', content)
-        
-        if not all([chunk_size, chunk_overlap, text_splitter]):
-            print("Warning: Could not find all configuration in target file, using defaults")
-            return {
-                'COLLECTION_NAME': collection_name,
-                'CHUNK_SIZE': 1500,
-                'CHUNK_OVERLAP': 250,
-                'TEXT_SPLITTER_TYPE': 'RecursiveCharacterTextSplitter'
-            }
-            
-        return {
-            'COLLECTION_NAME': collection_name,
-            'CHUNK_SIZE': int(chunk_size.group(1)),
-            'CHUNK_OVERLAP': int(chunk_overlap.group(1)),
-            'TEXT_SPLITTER_TYPE': text_splitter.group(1)
-        }
-    except Exception as e:
-        print(f"Warning: Error reading target configuration: {e}, using defaults")
-        return {
-            'COLLECTION_NAME': os.getenv('CHROMA_COLLECTION_NAME', 'darwin'),
-            'CHUNK_SIZE': 1000,
-            'CHUNK_OVERLAP': 200,
-            'TEXT_SPLITTER_TYPE': 'RecursiveCharacterTextSplitter'
-        }
+        # If relative_path is absolute, Path.join will ignore the left side
+        return str((script_dir / relative_path).resolve())
+    except Exception:
+        return relative_path
 
-# Get configuration
-target_config = get_target_config()
-COLLECTION_NAME = target_config['COLLECTION_NAME']
-CHUNK_SIZE = target_config['CHUNK_SIZE']
-CHUNK_OVERLAP = target_config['CHUNK_OVERLAP']
-TEXT_SPLITTER_TYPE = target_config['TEXT_SPLITTER_TYPE']
+def get_vector_store_config():
+    """Get vector store configuration from environment variables."""
+    collection_name = os.getenv('CHROMA_COLLECTION_NAME', 'darwin')
+    
+    # Get chunking configuration from .env
+    chunk_size = int(os.getenv('CHUNK_SIZE', '1500'))
+    chunk_overlap = int(os.getenv('CHUNK_OVERLAP', '250'))
+    text_splitter_type = os.getenv('TEXT_SPLITTER_TYPE', 'RecursiveCharacterTextSplitter')
+    
+    config = {
+        'COLLECTION_NAME': collection_name,
+        'CHUNK_SIZE': chunk_size,
+        'CHUNK_OVERLAP': chunk_overlap,
+        'TEXT_SPLITTER_TYPE': text_splitter_type
+    }
+    
+    print(f"Vector store config from .env: chunk_size={chunk_size}, overlap={chunk_overlap}, splitter={text_splitter_type}")
+    return config
+
+# Get configuration from .env
+vector_config = get_vector_store_config()
+COLLECTION_NAME = vector_config['COLLECTION_NAME']
+CHUNK_SIZE = vector_config['CHUNK_SIZE']
+CHUNK_OVERLAP = vector_config['CHUNK_OVERLAP']
+TEXT_SPLITTER_TYPE = vector_config['TEXT_SPLITTER_TYPE']
 
 # Other environment variables
 EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'Livingwithmachines/bert_1760_1900')
 POOLING = os.getenv('POOLING', 'mean').lower()
 BATCH_SIZE = 100
+# Enable a fast pass that only produces a BM25 corpus (no embeddings / Chroma)
+LEXICAL_ONLY = os.getenv('DARWIN_LEXICAL_ONLY', os.getenv('LEXICAL_ONLY', 'false')).lower() in ('1', 'true', 'yes')
+# Minimum chunk length to include (auto-0 for TEST letters unless overridden)
+_min_env = os.getenv('DARWIN_MIN_CHUNK_LEN')
+if _min_env is not None:
+    MIN_CHUNK_LEN = int(_min_env)
+else:
+    MIN_CHUNK_LEN = 0 if 'darwin_sources_TEST' in str(LETTERS_XML_DIR) else 50
 
 # Define output directories
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 OUTPUT_CHROMA_DIR = os.path.join(OUTPUT_DIR, "chroma_db")
+BM25_CORPUS_PATH = os.path.join(OUTPUT_DIR, "bm25_corpus.jsonl")
 
 # Get Chroma directory from environment variable
 FINAL_CHROMA_DIR = os.environ.get("CHROMA_PERSIST_DIRECTORY", OUTPUT_CHROMA_DIR)
@@ -159,32 +219,52 @@ def ensure_chroma_directory(chroma_dir):
         print(f"Error preparing Chroma directory: {e}")
         return False
 
+class _MinimalSplitter:
+    def __init__(self, chunk_size: int, chunk_overlap: int):
+        self.chunk_size = max(1, int(chunk_size))
+        self.chunk_overlap = max(0, int(chunk_overlap))
+        self.step = max(1, self.chunk_size - self.chunk_overlap)
+
+    def split_text(self, text: str):
+        if not text:
+            return []
+        chunks = []
+        i = 0
+        n = len(text)
+        while i < n:
+            chunks.append(text[i:i + self.chunk_size])
+            i += self.step
+        return chunks
+
 def get_text_splitter(splitter_type, chunk_size, chunk_overlap):
-    if splitter_type == 'RecursiveCharacterTextSplitter':
-        # Enhanced separators for letters - prioritize logical breaks
-        letter_separators = [
-            "\n\n\n",  # Multiple line breaks (major sections)
-            "\n\n",    # Double line breaks (paragraphs)
-            "\n",      # Single line breaks
-            ". ",      # Sentence endings
-            "! ",      # Exclamations
-            "? ",      # Questions
-            "; ",      # Semicolons (common in Victorian writing)
-            ", ",      # Commas
-            " ",       # Spaces
-            ""         # Characters
-        ]
-        return RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size, 
-            chunk_overlap=chunk_overlap,
-            separators=letter_separators,
-            keep_separator=True,
-            is_separator_regex=False
-        )
-    elif splitter_type == 'CharacterTextSplitter':
-        return CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    else:
-        raise ValueError(f"Unsupported text splitter type: {splitter_type}")
+    try:
+        if RecursiveCharacterTextSplitter is not None and splitter_type == 'RecursiveCharacterTextSplitter':
+            # Enhanced separators for letters - prioritize logical breaks
+            letter_separators = [
+                "\n\n\n",  # Multiple line breaks (major sections)
+                "\n\n",    # Double line breaks (paragraphs)
+                "\n",      # Single line breaks
+                ". ",      # Sentence endings
+                "! ",      # Exclamations
+                "? ",      # Questions
+                "; ",      # Semicolons (common in Victorian writing)
+                ", ",      # Commas
+                " ",       # Spaces
+                ""         # Characters
+            ]
+            return RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size, 
+                chunk_overlap=chunk_overlap,
+                separators=letter_separators,
+                keep_separator=True,
+                is_separator_regex=False
+            )
+        if CharacterTextSplitter is not None and splitter_type == 'CharacterTextSplitter':
+            return CharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    except Exception:
+        pass
+    # Fallback minimal splitter
+    return _MinimalSplitter(chunk_size, chunk_overlap)
 
 def clean_letter_text(text):
     """Clean and normalize letter text for better chunking."""
@@ -273,6 +353,73 @@ def parse_letter_xml(xml_file_path):
         
         # Clean and normalize the transcription for better chunking
         transcription = clean_letter_text(transcription)
+
+        # TEI entity enrichment for better lexical search later
+        tei_persons, tei_places, tei_orgs, tei_taxa = [], [], [], []
+        tei_bibl, tei_bibl_struct = [], []
+        try:
+            tei_persons = [p.get_text(strip=True) for p in soup.find_all(["persName", "person"]) if p.get_text(strip=True)]
+            tei_places = [p.get_text(strip=True) for p in soup.find_all(["placeName", "place"]) if p.get_text(strip=True)]
+            tei_orgs = [o.get_text(strip=True) for o in soup.find_all(["orgName", "org"]) if o.get_text(strip=True)]
+            tei_taxa = [t.get_text(strip=True) for t in soup.find_all("name") if t.get("type") in ("taxon", "species", "genus", "family") and t.get_text(strip=True)]
+
+            # Bibliographic references (free-text bibl)
+            for b in soup.find_all("bibl"):
+                txt = b.get_text(" ", strip=True)
+                if txt:
+                    tei_bibl.append(txt)
+
+            # Structured bibliographic references (biblStruct)
+            for bs in soup.find_all("biblStruct"):
+                entry = {}
+                try:
+                    # Authors
+                    authors = []
+                    for a in bs.find_all(["author", "editor"]):
+                        a_txt = a.get_text(" ", strip=True)
+                        if a_txt:
+                            authors.append(a_txt)
+                    if authors:
+                        entry["authors"] = authors
+
+                    # Title(s)
+                    title = None
+                    title_el = bs.find("title")
+                    if title_el:
+                        title = title_el.get_text(" ", strip=True)
+                    if title:
+                        entry["title"] = title
+
+                    # Date
+                    date_el = bs.find("date")
+                    if date_el:
+                        entry["date"] = date_el.get("when") or date_el.get_text(strip=True)
+
+                    # Publisher / Imprint
+                    imprint = bs.find("imprint")
+                    if imprint:
+                        pub = imprint.find("publisher")
+                        if pub and pub.get_text(strip=True):
+                            entry["publisher"] = pub.get_text(strip=True)
+                        place = imprint.find("pubPlace")
+                        if place and place.get_text(strip=True):
+                            entry["pub_place"] = place.get_text(strip=True)
+
+                    # IDs
+                    idnos = [i.get_text(strip=True) for i in bs.find_all("idno") if i.get_text(strip=True)]
+                    if idnos:
+                        entry["ids"] = idnos
+
+                    # Fallback full text
+                    if not entry:
+                        entry["text"] = bs.get_text(" ", strip=True)
+
+                    tei_bibl_struct.append(entry)
+                except Exception:
+                    # Best-effort; skip bad entry
+                    pass
+        except Exception:
+            pass
         
         # Parse date to extract year
         year = None
@@ -294,7 +441,15 @@ def parse_letter_xml(xml_file_path):
             'year': year,
             'abstract': abstract,
             'transcription': transcription,
-            'source_file': xml_file_path
+            'source_file': xml_file_path,
+            # TEI enrichments
+            'tei_persons': tei_persons,
+            'tei_places': tei_places,
+            'tei_orgs': tei_orgs,
+            'tei_taxa': tei_taxa,
+            # TEI bibliographic references
+            'tei_bibl': tei_bibl,
+            'tei_bibl_struct': tei_bibl_struct
         }
         
     except Exception as e:
@@ -325,12 +480,14 @@ def load_csv_metadata():
 def compute_embedding(text, tokenizer, model):
     try:
         # Get the device from the model
+        if torch is None or model is None or tokenizer is None:
+            raise RuntimeError("Embedding model not available")
         device = next(model.parameters()).device
-        
+
         # Tokenize and move to the same device as the model
         inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
         inputs = {k: v.to(device) for k, v in inputs.items()}
-        
+
         # Forward pass
         with torch.no_grad():
             outputs = model(**inputs)
@@ -350,6 +507,15 @@ def compute_embedding(text, tokenizer, model):
         # Move result back to CPU for numpy conversion
         embedding = pooled.squeeze().cpu().numpy()
         return embedding
+    except RuntimeError as e:
+        error_str = str(e).lower()
+        if "cuda" in error_str and ("kernel" in error_str or "compatibility" in error_str or "sm_" in error_str):
+            print(f"[ERROR] CUDA compatibility issue detected: {e}")
+            print("This GPU may not be supported by the current PyTorch version.")
+            print("Consider using CPU mode with DARWIN_FORCE_CPU=true or upgrading PyTorch.")
+        else:
+            print(f"Runtime error computing embedding: {e}")
+        return None
     except Exception as e:
         print(f"Error computing embedding for text: {text[:50]}... - {str(e)}")
         return None
@@ -359,7 +525,7 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
     print(f"Processing letters from: {letters_dir}")
     
     text_splitter = get_text_splitter(TEXT_SPLITTER_TYPE, CHUNK_SIZE, CHUNK_OVERLAP)
-    letters_dir_path = resolve_path(letters_dir)
+    letters_dir_path = letters_dir if os.path.isabs(letters_dir) else resolve_path(letters_dir)
     
     if not os.path.exists(letters_dir_path):
         print(f"Error: Letters directory not found: {letters_dir_path}")
@@ -374,6 +540,14 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
     print(f"Found {len(xml_files)} letter XML files")
     
     texts, metadatas, embeddings = [], [], []
+
+    # Prepare BM25 corpus file (overwrite on each run)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    try:
+        bm25_fh = open(BM25_CORPUS_PATH, 'w', encoding='utf-8')
+    except Exception as e:
+        print(f"Warning: Could not open BM25 corpus file for writing: {e}")
+        bm25_fh = None
     
     def add_batch_to_store(texts_batch, metadatas_batch, embeddings_batch):
         nonlocal texts, metadatas, embeddings
@@ -384,12 +558,18 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
         # Filter out any entries with None or empty values
         valid_entries = []
         for i, (text, meta, emb) in enumerate(zip(texts_batch, metadatas_batch, embeddings_batch)):
-            if text and meta and emb is not None:
-                # Convert any potential None values in metadata to strings
-                for key in meta:
-                    if meta[key] is None:
-                        meta[key] = "None"
-                valid_entries.append((text, meta, emb))
+            if not text or not meta:
+                continue
+            # Convert any potential None values in metadata to strings
+            for key in meta:
+                if meta[key] is None:
+                    meta[key] = "None"
+            if LEXICAL_ONLY:
+                # Accept even if embedding is None in lexical-only mode
+                valid_entries.append((text, meta, None))
+            else:
+                if emb is not None:
+                    valid_entries.append((text, meta, emb))
         
         if not valid_entries:
             return True
@@ -399,7 +579,20 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
         texts_filtered, metadatas_filtered, embeddings_filtered = list(texts_filtered), list(metadatas_filtered), list(embeddings_filtered)
         
         try:
-            vector_store.add_texts(texts_filtered, metadatas=metadatas_filtered, embeddings=embeddings_filtered)
+            if not LEXICAL_ONLY and vector_store is not None:
+                vector_store.add_texts(texts_filtered, metadatas=metadatas_filtered, embeddings=embeddings_filtered)
+
+            # Append to BM25 corpus JSONL for hybrid retrieval
+            if bm25_fh is not None:
+                for txt, meta in zip(texts_filtered, metadatas_filtered):
+                    uid = f"{meta.get('letter_id','unknown')}#{meta.get('chunk_index',0)}"
+                    rec = {"id": uid, "text": txt, "metadata": meta}
+                    try:
+                        bm25_fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                    except Exception as e:
+                        # Non-fatal write error
+                        print(f"Warning: Failed to write BM25 record for {uid}: {e}")
+
             texts, metadatas, embeddings = [], [], []
             letter_stats['successful_batches'] += 1
             return True
@@ -428,17 +621,19 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
                     continue
                 
                 # Skip chunks that are too short to be meaningful
-                if len(chunk.strip()) < 50:
+                if len(chunk.strip()) < MIN_CHUNK_LEN:
                     continue
                 
-                # Compute embedding for this chunk
-                embedding = compute_embedding(chunk, tokenizer, model)
-                if embedding is None:
-                    continue
-                
-                # Validate embedding
-                if not (isinstance(embedding, np.ndarray) and not np.isnan(embedding).any() and not np.isinf(embedding).any()):
-                    continue
+                # Compute embedding for this chunk (skip in lexical-only mode)
+                embedding = None
+                if not LEXICAL_ONLY:
+                    embedding = compute_embedding(chunk, tokenizer, model)
+                    if embedding is None:
+                        continue
+                    
+                    # Validate embedding
+                    if not (isinstance(embedding, np.ndarray) and not np.isnan(embedding).any() and not np.isinf(embedding).any()):
+                        continue
                 
                 # Update statistics
                 letter_stats['total_chunks'] += 1
@@ -464,12 +659,23 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
                     "sender_address": csv_data.get('sender_address'),
                     "recipient_address": csv_data.get('recipient_address'),
                     "source": csv_data.get('source'),
-                    "corpus": "darwin"
+                    "corpus": "darwin",
+                    # TEI enrichments converted to strings (Chroma doesn't support lists)
+                    "tei_persons": "; ".join(letter_data.get('tei_persons', [])) or None,
+                    "tei_places": "; ".join(letter_data.get('tei_places', [])) or None,
+                    "tei_orgs": "; ".join(letter_data.get('tei_orgs', [])) or None,
+                    "tei_taxa": "; ".join(letter_data.get('tei_taxa', [])) or None,
+                    # Bibliography simplified to string format
+                    "tei_bibl": "; ".join(letter_data.get('tei_bibl', [])) or None,
+                    "tei_bibl_struct_count": len(letter_data.get('tei_bibl_struct', []))
                 }
                 
                 texts.append(chunk)
                 metadatas.append(metadata_dict)
-                embeddings.append(embedding.tolist())
+                if LEXICAL_ONLY:
+                    embeddings.append(None)
+                else:
+                    embeddings.append(embedding.tolist())
                 
                 # Process batch when we reach the batch size
                 if len(texts) >= BATCH_SIZE:
@@ -484,6 +690,14 @@ def process_letters(letters_dir, vector_store, tokenizer, model, csv_metadata):
     # Process any remaining texts
     if texts:
         add_batch_to_store(texts, metadatas, embeddings)
+
+    # Close BM25 file handle
+    try:
+        if bm25_fh is not None:
+            bm25_fh.close()
+            print(f"BM25 corpus written to: {BM25_CORPUS_PATH}")
+    except Exception:
+        pass
     
     print(f"\nProcessing complete:")
     print(f"Total letters processed: {letter_stats['total_letters']}")
@@ -501,15 +715,18 @@ def generate_vector_store_stats(
     """Generate comprehensive statistics about the vector store creation process."""
     try:
         # Get system information
+        cpu_logical = psutil.cpu_count() if psutil else os.cpu_count()
+        ram_total = f"{psutil.virtual_memory().total / (1024**3):.1f} GB" if psutil else "Unknown"
+        has_torch = torch is not None and getattr(torch, 'cuda', None) is not None
         system_info = {
             "OS": platform.system(),
             "OS Version": platform.version(),
             "Python Version": platform.python_version(),
             "CPU": platform.processor(),
-            "CPU Cores": f"{os.cpu_count()} physical, {psutil.cpu_count()} logical",
-            "RAM": f"{psutil.virtual_memory().total / (1024**3):.1f} GB",
-            "GPU": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None",
-            "CUDA Version": torch.version.cuda if torch.cuda.is_available() else "N/A"
+            "CPU Cores": f"{os.cpu_count()} physical, {cpu_logical} logical",
+            "RAM": ram_total,
+            "GPU": torch.cuda.get_device_name(0) if has_torch and torch.cuda.is_available() else "None",
+            "CUDA Version": torch.version.cuda if has_torch and torch.cuda.is_available() else "N/A"
         }
 
         # Build the statistics string
@@ -593,6 +810,7 @@ def verify_letter_documents(vector_store):
     for query in test_queries:
         print(f"Testing retrieval with query: '{query}'")
         try:
+            # Best-effort guard: enforce CPU verification if HF embeddings support it
             results = vector_store.similarity_search(query, k=3)
             
             if results:
@@ -635,6 +853,41 @@ def verify_letter_documents(vector_store):
     
     return verification_results
 
+def check_cuda_compatibility():
+    """Check CUDA compatibility and return the best device to use."""
+    if torch is None or not hasattr(torch, 'cuda'):
+        return "cpu", "PyTorch CUDA not available"
+    
+    if not torch.cuda.is_available():
+        return "cpu", "CUDA not available"
+    
+    try:
+        device_count = torch.cuda.device_count()
+        if device_count == 0:
+            return "cpu", "No CUDA devices found"
+        
+        # Get GPU info for the first device
+        device_name = torch.cuda.get_device_name(0)
+        compute_capability = torch.cuda.get_device_capability(0)
+        
+        print(f"GPU detected: {device_name} (compute capability {compute_capability})")
+        
+        # Check for RTX 5090 or other sm_120 devices
+        if compute_capability >= (12, 0):
+            return "cpu", f"GPU compute capability {compute_capability} not supported by current PyTorch (max: 9.0)"
+        
+        # Test actual CUDA functionality with a simple operation
+        try:
+            test_tensor = torch.tensor([1.0], device='cuda')
+            test_result = test_tensor + test_tensor
+            test_result.cpu()
+            return "cuda", "CUDA compatible and functional"
+        except Exception as e:
+            return "cpu", f"CUDA test failed: {str(e)}"
+            
+    except Exception as e:
+        return "cpu", f"CUDA check failed: {str(e)}"
+
 def main():
     """Main function to create the Darwin corpus Chroma vector store."""
     print("Starting Darwin corpus Chroma vector store creation...")
@@ -643,34 +896,71 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     chroma_dir = OUTPUT_CHROMA_DIR
     
-    # Ensure Chroma directory is ready
-    if not ensure_chroma_directory(chroma_dir):
-        print("Failed to prepare Chroma directory. Exiting.")
-        sys.exit(1)
+    # Ensure Chroma directory is ready (skip in lexical-only mode)
+    if not LEXICAL_ONLY:
+        if not ensure_chroma_directory(chroma_dir):
+            print("Failed to prepare Chroma directory. Exiting.")
+            sys.exit(1)
     
-    # Check for GPU availability
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
+    # Check for GPU availability with enhanced compatibility checking
+    force_cpu = os.getenv('DARWIN_FORCE_CPU', os.getenv('FORCE_CPU', 'false')).lower() in ('1', 'true', 'yes')
     
-    # Initialize the embedding model
-    print(f"Initializing embedding model: {EMBEDDING_MODEL}")
-    embeddings = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        model_kwargs={'device': device},
-        encode_kwargs={'normalize_embeddings': True}
-    )
+    if force_cpu:
+        device = "cpu"
+        print("Using device: cpu (forced)")
+    else:
+        device, reason = check_cuda_compatibility()
+        print(f"Using device: {device} ({reason})")
     
-    # Initialize the vector store
-    vector_store = Chroma(
-        collection_name=COLLECTION_NAME,
-        embedding_function=embeddings,
-        persist_directory=chroma_dir
-    )
-    
-    # Initialize tokenizer and model for embedding computation
-    tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL)
-    model = AutoModel.from_pretrained(EMBEDDING_MODEL)
-    model.to(device)
+    if LEXICAL_ONLY:
+        print("[INFO] Lexical-only mode: skipping embedding model and Chroma init")
+        embeddings = None
+        vector_store = None
+        tokenizer = None
+        model = None
+    else:
+        # Initialize tokenizer and model first
+        print(f"Initializing embedding model: {EMBEDDING_MODEL}")
+        tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL)
+        model = AutoModel.from_pretrained(EMBEDDING_MODEL)
+
+        # Try to move model to the chosen device, fall back to CPU on any issues
+        try:
+            model.to(device)
+            # Enhanced CUDA probe test with actual embedding computation
+            if device == "cuda":
+                print("Performing CUDA embedding test...")
+                _probe_text = "This is a test sentence for CUDA compatibility."
+                _probe_result = compute_embedding(_probe_text, tokenizer, model)
+                if _probe_result is None:
+                    raise RuntimeError("CUDA embedding test failed")
+                print("✅ CUDA embedding test passed")
+        except Exception as e:
+            if device == "cuda":
+                print(f"[WARN] CUDA device test failed: {e}")
+                print("Falling back to CPU for embeddings...")
+                device = "cpu"
+                try:
+                    model.to(device)
+                    print("✅ Successfully fell back to CPU")
+                except Exception as cpu_e:
+                    print(f"[ERROR] CPU fallback also failed: {cpu_e}")
+                    sys.exit(1)
+            else:
+                print(f"[ERROR] Model initialization failed: {e}")
+                sys.exit(1)
+
+        # Initialize embedding function and vector store with the final device
+        embeddings = HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL,
+            model_kwargs={'device': device},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        vector_store = Chroma(
+            collection_name=COLLECTION_NAME,
+            embedding_function=embeddings,
+            persist_directory=chroma_dir
+        )
     
     # Load CSV metadata
     csv_metadata = load_csv_metadata()
@@ -682,8 +972,9 @@ def main():
     total_time = time.time() - start_time
     
     # Persist the vector store
-    vector_store.persist()
-    print("\nChroma vector store created and automatically persisted")
+    if not LEXICAL_ONLY and vector_store is not None:
+        vector_store.persist()
+        print("\nChroma vector store created and automatically persisted")
     
     # Generate statistics
     stats_file = os.path.join(OUTPUT_DIR, f"{COLLECTION_NAME}.txt")
@@ -695,8 +986,13 @@ def main():
         output_file=stats_file
     )
     
-    # Verify letter documents
-    verify_letter_documents(vector_store)
+    # Verify letter documents unless explicitly skipped; avoid if CUDA errors forced CPU fallback mid-run
+    skip_verify = os.getenv('DARWIN_SKIP_VERIFY', 'false').lower() in ('1', 'true', 'yes')
+    if not skip_verify and not LEXICAL_ONLY and vector_store is not None:
+        try:
+            verify_letter_documents(vector_store)
+        except Exception as e:
+            print(f"[WARN] Skipping verification due to error: {e}")
     
     print(f"\n✅ Darwin corpus vector store creation completed successfully!")
     print(f"Processing time: {total_time:.2f} seconds")

@@ -34,6 +34,9 @@ unstructured==0.17.2
 # Utilities
 python-dotenv==1.1.0
 numpy==1.26.4
+networkx==3.4.2  # Pin to avoid Python 3.11 requirement
+scipy==1.15.3    # Pin to avoid Python 3.11 requirement
+scikit-learn==1.6.0  # Pin to avoid Python 3.11 requirement
 asgiref==3.8.1
 requests==2.32.4
 python-jose[cryptography]==3.4.0  # For AWS Cognito JWT validation
@@ -64,6 +67,8 @@ pandas>=1.5.0,<3.0.0
 nltk==3.9.1
 langchain-text-splitters==0.3.8
 tqdm==4.67.1
+rank-bm25==0.2.2
+beautifulsoup4==4.12.3
 
 # Used for converting Livingwithmachines/bert_1890_1900 to a compatible format
 sentence-transformers==2.6.1

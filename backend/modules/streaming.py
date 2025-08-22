@@ -16,7 +16,7 @@ from datetime import datetime
 from backend.telemetry.core import create_span
 from backend.telemetry.constants import SpanAttributes, SpanNames, OpenInferenceSpanKind
 from opentelemetry.trace import SpanKind, Status, StatusCode
-from backend.retrievers.hansard_retriever import format_document_for_citation
+from backend.retrievers.darwin_retriever import format_document_for_citation
 from backend.telemetry import set_span_outputs
 
 logger = logging.getLogger(__name__)

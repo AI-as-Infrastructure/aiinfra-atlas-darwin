@@ -80,7 +80,7 @@ def _get_default_config() -> Dict[str, Any]:
         "system_prompt": ROLE_DEFINITION[:101] + ("..." if len(ROLE_DEFINITION) > 101 else ""),
         "retriever_config": {
             "embedding_model": embedding_model,
-            "search_type": "similarity",
+            "search_type": os.getenv("SEARCH_TYPE", "hybrid"),
             "search_k": 10,
             "search_score_threshold": 0.0,
             "citation_limit": 10,
@@ -107,6 +107,7 @@ def _load_environment_variables(config: Dict[str, Any]) -> None:
         "CHROMA_PERSIST_DIRECTORY": ["retriever_config", "chroma_persist_directory"],
         "CHROMA_COLLECTION_NAME": ["retriever_config", "chroma_collection_name"],
         "EMBEDDING_MODEL": ["retriever_config", "embedding_model"],
+    "SEARCH_TYPE": ["retriever_config", "search_type"],
         "LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS": ["retriever_config", "LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS"],
         "LARGE_RETRIEVAL_SIZE_ALL_CORPUS": ["retriever_config", "LARGE_RETRIEVAL_SIZE_ALL_CORPUS"],
         "TEST_TARGET": ["retriever_config", "target_id"],

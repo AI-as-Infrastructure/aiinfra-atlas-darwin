@@ -434,18 +434,37 @@ async def query(request: Request):
                 continue
             raise HTTPException(status_code=503, detail="Document retrieval temporarily unavailable")
     
-    # Format documents as citations for frontend display with graceful error handling
-    citations = []
-    for idx, doc in enumerate(documents):
+    # Format citations collapsed to parent (letter) level
+    try:
+        # Prefer retriever-specific formatter if available
         try:
-            # Import the format_document_for_citation function
-            from backend.retrievers.hansard_retriever import format_document_for_citation
-            citation = format_document_for_citation(doc, idx)
-            if citation:
-                citations.append(citation)
+            from backend.retrievers.darwin_retriever import format_document_for_citation as _fmt
         except Exception:
-            # Continue processing other documents if one citation fails
-            continue
+            try:
+                from backend.retrievers.hansard_retriever import format_document_for_citation as _fmt
+            except Exception:
+                _fmt = None
+
+        from backend.modules.citations import aggregate_parent_citations
+        # Limit how many parent citations we show to users (keep UI clean)
+        from backend.modules.config import get_citation_limit
+        citations = aggregate_parent_citations(
+            documents,
+            parent_key="letter_id",
+            limit=get_citation_limit(),
+            formatter_fn=_fmt,
+        )
+    except Exception:
+        # Fallback to chunk-level formatting if aggregation fails
+        citations = []
+        for idx, doc in enumerate(documents):
+            try:
+                # Use the already imported Darwin formatter
+                c = _fmt(doc, idx) if _fmt else None
+                if c:
+                    citations.append(c)
+            except Exception:
+                continue
     
     # Return both raw results and formatted citations
     return {

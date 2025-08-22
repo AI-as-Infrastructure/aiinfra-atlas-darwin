@@ -76,7 +76,7 @@ def retrieve_documents(
     corpus_filter: Optional[str] = None,
     direction_filter: Optional[str] = None,
     time_period_filter: Optional[str] = None,
-    search_type: str = "similarity",
+    search_type: Optional[str] = None,
     session_id: Optional[str] = None,
     qa_id: Optional[str] = None,
     create_parent_span: bool = True
@@ -135,6 +135,8 @@ def retrieve_documents(
                     config["direction_filter"] = direction_filter
                 if time_period_filter:
                     config["time_period_filter"] = time_period_filter
+                if search_type:
+                    config["search_type"] = search_type
                 if session_id:
                     config["session_id"] = session_id
                 if qa_id:
@@ -219,6 +221,8 @@ def retrieve_documents(
                     config["direction_filter"] = direction_filter
                 if time_period_filter:
                     config["time_period_filter"] = time_period_filter
+                if search_type:
+                    config["search_type"] = search_type
                 if session_id:
                     config["session_id"] = session_id
                 if qa_id:
@@ -332,7 +336,8 @@ def retrieve_documents_with_telemetry(
     corpus_filter: Optional[str] = None,
     direction_filter: Optional[str] = None,
     time_period_filter: Optional[str] = None,
-    k: Optional[int] = None
+    k: Optional[int] = None,
+    search_type: Optional[str] = None
 ) -> Tuple[List[Document], str]:
     """
     Retrieve documents with telemetry instrumentation.
@@ -365,7 +370,7 @@ def retrieve_documents_with_telemetry(
         corpus_filter=corpus_filter,
         direction_filter=direction_filter,
         time_period_filter=time_period_filter,
-        search_type="similarity",
+        search_type=search_type,
         session_id=session_id,
         qa_id=qa_id,
         create_parent_span=True  # Create proper telemetry spans
