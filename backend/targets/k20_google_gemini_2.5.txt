@@ -1,8 +1,8 @@
-# K20 Google gemini-2.5-flash Test Target Configuration (Memory Optimized)
+# K20 Google gemini-2.5-pro Test Target Configuration (Memory Optimized)
 
 # LLM Configuration
 LLM_PROVIDER=GOOGLE
-LLM_MODEL=gemini-2.5-flash
+LLM_MODEL=gemini-2.5-pro
 
 # Search-K (fetch-k) controls the number of document chunks sent to the LLM for analysis
 # Reduced from 30 to 20 to improve memory usage under load (33% reduction)
