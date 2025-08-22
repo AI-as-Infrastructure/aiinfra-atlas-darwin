@@ -12,8 +12,8 @@ TMP_VENV=".venv_lock_gpu"
 REQ_TXT="config/requirements.txt"
 OUT_LOCK="config/requirements.lock"
 
-# Default to CUDA 12.4 wheel index; allow override via TORCH_CUDA_INDEX_URL
-INDEX_URL_DEFAULT="https://download.pytorch.org/whl/cu124"
+# Default to CUDA 12.6 wheel index; allow override via TORCH_CUDA_INDEX_URL
+INDEX_URL_DEFAULT="https://download.pytorch.org/whl/cu126"
 INDEX_URL="${TORCH_CUDA_INDEX_URL:-$INDEX_URL_DEFAULT}"
 
 if [ ! -f "$REQ_TXT" ]; then
