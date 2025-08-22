@@ -2,7 +2,7 @@ Darwin Corpus Vector Store Creation Statistics
 ============================================
 
 Collection: darwin
-Created: 2025-07-18 14:24:00
+Created: 2025-08-22 13:03:14
 
 Model Information
 ---------------
@@ -34,16 +34,16 @@ Average Words per Chunk: 175.9
 
 Processing Statistics
 -------------------
-Total Processing Time: 272.74 seconds
-Average Time per Letter: 0.02 seconds
-Chunks per Second: 94.6
+Total Processing Time: 3675.57 seconds
+Average Time per Letter: 0.24 seconds
+Chunks per Second: 7.0
 
 System Information
 ----------------
-OS: Linux #202412060638~1751390742~22.04~79b9668 SMP PREEMPT_DYNAMIC Tue J
-Python: 3.10.12
+OS: Linux #27~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue Jul 22 17:38:49 UTC 2
+Python: 3.12.3
 CPU: x86_64
 CPU Cores: 32 physical, 32 logical
 RAM: 125.6 GB
-GPU: NVIDIA GeForce RTX 4070 Ti SUPER
+GPU: NVIDIA GeForce RTX 5090
 CUDA Version: 12.6
