@@ -701,8 +701,6 @@ async def associate_feedback_with_spans(session_id: str, qa_id: str, feedback_da
     This ensures feedback is directly associated with the model's response output.
     Returns True if successful, False otherwise.
     """
-    import logging
-    logger = logging.getLogger(__name__)
     try:
         # The LLM response span is registered with a special key format of {qa_id}_response
         # Look up this response span specifically for feedback with retry logic

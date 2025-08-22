@@ -70,7 +70,9 @@ async def submit_feedback(feedback: UserFeedback, request: Request):
             "feedback_type": feedback.feedback_type,
             "sentiment": feedback.sentiment,
             "analysis_quality": feedback.analysis_quality,
+            "corpus_fidelity": feedback.corpus_fidelity,
             "difficulty": feedback.difficulty,
+            "user_expertise": feedback.user_expertise,
             "faults": feedback.faults,
             
             # Include rich context data from frontend
