@@ -36,6 +36,34 @@
           </div>
         </div>
 
+        <!-- Corpus Fidelity ---->
+        <div class="feedback-section">
+          <label class="section-label">
+            Corpus Fidelity
+            <span class="tooltip" title="Fidelity to source materials in the corpus">ⓘ</span>
+          </label>
+          <div class="likert-scale">
+            <div
+              v-for="value in 5"
+              :key="`corpus_fidelity-${value}`"
+              class="likert-option"
+              @click="setRating('corpus_fidelity', value)"
+            >
+              <input
+                type="radio"
+                :id="`corpus_fidelity-${value}`"
+                :value="value"
+                v-model="ratings.corpus_fidelity"
+                :disabled="disabled"
+              />
+              <label :for="`corpus_fidelity-${value}`" class="likert-label">
+                <span class="likert-circle" :class="{ active: ratings.corpus_fidelity >= value }"></span>
+                <span class="likert-text">{{ value }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <!-- Analysis Quality -->
         <div class="feedback-section">
           <label class="section-label">
@@ -149,6 +177,46 @@
         </div>
       </div>
 
+      <!-- User Expertise Section -->
+      <div class="expertise-section">
+        <label class="section-label">User Expertise</label>
+        <div class="expertise-options">
+          <div class="expertise-option">
+            <input
+              type="radio"
+              id="expertise-expert"
+              value="expert"
+              v-model="userExpertise"
+              :disabled="disabled"
+            />
+            <label for="expertise-expert">Expert</label>
+          </div>
+          <div class="expertise-option">
+            <input
+              type="radio"
+              id="expertise-non-expert"
+              value="non-expert"
+              v-model="userExpertise"
+              :disabled="disabled"
+            />
+            <label for="expertise-non-expert">Non-expert</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Comments Section -->
+      <div class="comments-section">
+        <label class="section-label" for="additional-comments">Additional Comments</label>
+        <textarea
+          id="additional-comments"
+          class="comments-textarea"
+          v-model="additionalComments"
+          :disabled="disabled"
+          placeholder="Please provide any additional feedback, suggestions, or observations about the response..."
+          rows="4"
+        ></textarea>
+      </div>
+
       <!-- Faults Section -->
       <div class="faults-section">
         <label class="section-label">Faults</label>
@@ -252,6 +320,7 @@ export default {
     return {
       ratings: {
         factual_accuracy: null,
+        corpus_fidelity: null,
         analysis_quality: null,
         relevance: null,
         difficulty: null,
@@ -263,6 +332,8 @@ export default {
         inappropriate: false,
         bias: false
       },
+      userExpertise: null,
+      additionalComments: '',
       isSubmitting: false,
       configData: null
     }
@@ -271,7 +342,9 @@ export default {
     hasExtendedFeedback() {
       const hasRatings = Object.values(this.ratings).some(rating => rating !== null)
       const hasFaults = Object.values(this.faults).some(fault => fault === true)
-      return hasRatings || hasFaults
+      const hasExpertise = this.userExpertise !== null
+      const hasComments = this.additionalComments.trim().length > 0
+      return hasRatings || hasFaults || hasExpertise || hasComments
     }
   },
   methods: {
@@ -335,6 +408,10 @@ export default {
           feedbackData.factual_accuracy = this.ratings.factual_accuracy
         }
         
+        if (this.ratings.corpus_fidelity !== null) {
+          feedbackData.corpus_fidelity = this.ratings.corpus_fidelity
+        }
+        
         if (this.ratings.analysis_quality !== null) {
           feedbackData.analysis_quality = this.ratings.analysis_quality
         }
@@ -358,6 +435,16 @@ export default {
         if (activeFaults.length > 0) {
           // Only send faults structure, not both tags and faults to avoid duplication
           feedbackData.faults = this.faults
+        }
+
+        // User expertise - only include if selected
+        if (this.userExpertise) {
+          feedbackData.user_expertise = this.userExpertise
+        }
+
+        // Additional comments - only include if provided
+        if (this.additionalComments.trim().length > 0) {
+          feedbackData.feedback_text = this.additionalComments.trim()
         }
         
         // The simple feedback data (sentiment, feedback_text, etc.) is already included from completeFeedbackPayload
@@ -403,6 +490,7 @@ export default {
     resetForm() {
       this.ratings = {
         factual_accuracy: null,
+        corpus_fidelity: null,
         analysis_quality: null,
         relevance: null,
         difficulty: null,
@@ -414,6 +502,8 @@ export default {
         inappropriate: false,
         bias: false
       }
+      this.userExpertise = null
+      this.additionalComments = ''
     }
   },
   
@@ -426,6 +516,12 @@ export default {
     }
     if (this.initialData.faults) {
       this.faults = { ...this.faults, ...this.initialData.faults }
+    }
+    if (this.initialData.userExpertise) {
+      this.userExpertise = this.initialData.userExpertise
+    }
+    if (this.initialData.additionalComments) {
+      this.additionalComments = this.initialData.additionalComments
     }
   }
 }
@@ -532,6 +628,71 @@ export default {
   color: #6c757d;
 }
 
+.expertise-section {
+  border-top: 1px solid #e9ecef;
+  padding-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.expertise-options {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.75rem;
+}
+
+.expertise-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expertise-option input[type="radio"] {
+  margin: 0;
+}
+
+.expertise-option label {
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+}
+
+.comments-section {
+  border-top: 1px solid #e9ecef;
+  padding-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.comments-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #495057;
+  background-color: white;
+  resize: vertical;
+  min-height: 100px;
+  margin-top: 0.75rem;
+  transition: border-color 0.2s ease;
+}
+
+.comments-textarea:focus {
+  outline: none;
+  border-color: #363636;
+}
+
+.comments-textarea:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.comments-textarea::placeholder {
+  color: #6c757d;
+  opacity: 0.8;
+}
+
 .faults-section {
   border-top: 1px solid #e9ecef;
   padding-top: 1.5rem;
@@ -612,6 +773,14 @@ export default {
   
   .likert-scale {
     max-width: 250px;
+  }
+  
+  .expertise-options {
+    gap: 1rem;
+  }
+  
+  .comments-textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
   }
   
   .faults-grid {
