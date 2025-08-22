@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-ATLAS-Compatible Retriever Generator for Darwin Corpus Vector Store
+Enhanced Darwin Retriever Generator for ATLAS
 
-This script generates a retriever class that is fully compatible with the ATLAS system
-for a vector store created by create_darwin_store.py.
+This script generates a complete Darwin retriever with all advanced features:
+- Hybrid search (dense + BM25 + RRF fusion)
+- Rich citation formatting with TEI entities
+- CUDA fallback capabilities
+- Darwin Project canonical URLs
+- Time period and direction filtering
 
-It reads a manifest file describing the vector store configuration, then auto-generates a Python retriever
-class that connects to the Chroma vector database, loads the correct embedding model, and exposes methods
-for semantic search and document retrieval. The generated retriever can be used directly in the ATLAS backend
-or as a standalone script for querying the Darwin corpus vector store.
+The generated retriever matches the full functionality of the working darwin_retriever.py
+and integrates seamlessly with the ATLAS frontend.
 """
 import os
 import re
@@ -60,6 +62,22 @@ def parse_manifest_file(manifest_path):
     return config
 
 def generate_atlas_retriever(config, output_path):
+    """Generate enhanced Darwin retriever using the working template."""
+    # Use the enhanced generator instead of the old basic template
+    import subprocess
+    
+    enhanced_script = Path(__file__).parent / "create_darwin_retriever_enhanced.py"
+    if enhanced_script.exists():
+        print("🔄 Using enhanced retriever generator...")
+        result = subprocess.run([sys.executable, str(enhanced_script)], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ Enhanced retriever generated successfully!")
+            return
+        else:
+            print(f"❌ Enhanced generator failed: {result.stderr}")
+            print("🔄 Falling back to basic template...")
+    
+    # Fallback to basic template (original code)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     template = '''#!/usr/bin/env python3
 """
