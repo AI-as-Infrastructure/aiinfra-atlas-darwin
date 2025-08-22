@@ -119,13 +119,18 @@ python3.10 -m venv $APP_DIR/.venv
 source $APP_DIR/.venv/bin/activate
 pip install --upgrade pip
 
-# Install requirements
-if [ -f "$APP_DIR/requirements.txt" ]; then
+# Install requirements (prioritize requirements.lock)
+if [ -f "$APP_DIR/config/requirements.lock" ]; then
+    echo "Installing from requirements.lock (locked dependencies)..."
+    pip install -r $APP_DIR/config/requirements.lock
+elif [ -f "$APP_DIR/requirements.txt" ]; then
+    echo "Installing from requirements.txt (fallback)..."
     pip install -r $APP_DIR/requirements.txt
 elif [ -f "$APP_DIR/config/requirements.txt" ]; then
+    echo "Installing from config/requirements.txt (fallback)..."
     pip install -r $APP_DIR/config/requirements.txt
 else
-    echo "ERROR: No requirements.txt found"
+    echo "ERROR: No requirements file found"
     exit 1
 fi
 

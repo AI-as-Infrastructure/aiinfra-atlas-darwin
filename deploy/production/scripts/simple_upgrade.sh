@@ -58,7 +58,14 @@ chmod +x config/generate_vue_files.sh
 echo "🐍 Updating Python dependencies..."
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r config/requirements.txt
+# Use requirements.lock if available, fallback to requirements.txt
+if [ -f "config/requirements.lock" ]; then
+    echo "Installing from requirements.lock (locked dependencies)..."
+    pip install -r config/requirements.lock
+else
+    echo "Installing from requirements.txt (fallback)..."
+    pip install -r config/requirements.txt
+fi
 
 # 6. Graceful service restart
 echo "🔄 Restarting services..."
