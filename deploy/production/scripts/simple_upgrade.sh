@@ -65,6 +65,27 @@ fi
 echo "Installing from requirements.lock (locked dependencies)..."
 pip install -r config/requirements.lock
 
+# 5b. Preflight import checks to catch runtime errors before service restart
+echo "🔎 Preflight: verifying backend and worker imports..."
+python - <<'PY'
+import sys
+def check(mod):
+    try:
+        __import__(mod)
+        print(f"[OK] import {mod}")
+    except Exception as e:
+        print(f"[FAIL] import {mod}: {e}")
+        sys.exit(1)
+check("backend.app")
+try:
+    check("backend.services.worker")
+except SystemExit:
+    raise
+except Exception:
+    # Worker optional; don't fail deploy if module is absent
+    print("[WARN] backend.services.worker not present; skipping")
+PY
+
 # 6. Graceful service restart
 echo "🔄 Restarting services..."
 
@@ -88,6 +109,7 @@ for i in {1..30}; do
 done
 
 # Reset failed states
+sudo systemctl daemon-reload
 sudo systemctl reset-failed gunicorn llm-worker || true
 
 # Start services

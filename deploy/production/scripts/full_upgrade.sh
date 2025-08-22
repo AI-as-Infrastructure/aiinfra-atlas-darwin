@@ -52,6 +52,25 @@ fi
 echo "Installing from requirements.lock (locked dependencies)..."
 pip install -r config/requirements.lock
 
+echo "🔎 Preflight: verifying backend and worker imports..."
+python - <<'PY'
+import sys
+def check(mod):
+    try:
+        __import__(mod)
+        print(f"[OK] import {mod}")
+    except Exception as e:
+        print(f"[FAIL] import {mod}: {e}")
+        sys.exit(1)
+check("backend.app")
+try:
+    check("backend.services.worker")
+except SystemExit:
+    raise
+except Exception:
+    print("[WARN] backend.services.worker not present; skipping")
+PY
+
 # 6. Set up Python package structure (in case it's missing)
 echo "📦 Setting up Python package structure..."
 mkdir -p backend
@@ -110,6 +129,7 @@ for i in {1..30}; do
 done
 
 # Reset failed states
+sudo systemctl daemon-reload
 sudo systemctl reset-failed gunicorn llm-worker || true
 
 # Start services
