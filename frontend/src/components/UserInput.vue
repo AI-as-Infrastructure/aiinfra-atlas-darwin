@@ -718,6 +718,15 @@
 .select::after {
   border-color: #000 !important;
 }
+
+/* Specific widths for filter selectors to prevent text overlap with dropdown arrow */
+.control.is-direction-selector .select select {
+  width: 182px !important; /* Fine-tuned width for "Received by Darwin" */
+}
+
+.control.is-time_period-selector .select select {
+  width: 140px !important; /* Use width instead of min-width */
+}
 input.input {
   background: #fff !important;
   color: #111 !important;
