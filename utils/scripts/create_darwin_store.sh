@@ -7,6 +7,21 @@ set -e
 export ENVIRONMENT=development
 echo "Using ENVIRONMENT=$ENVIRONMENT"
 
+# Source environment variables from .env.development
+if [ -f "config/.env.development" ]; then
+    echo "🔧 Loading environment variables from config/.env.development..."
+    # Export key variables that the Python script needs
+    export $(grep '^CHUNK_SIZE=' config/.env.development)
+    export $(grep '^CHUNK_OVERLAP=' config/.env.development)
+    export $(grep '^TEXT_SPLITTER_TYPE=' config/.env.development)
+    export $(grep '^CHROMA_COLLECTION_NAME=' config/.env.development)
+    export $(grep '^EMBEDDING_MODEL=' config/.env.development)
+    export $(grep '^POOLING=' config/.env.development)
+    
+    echo "  Exported CHUNK_SIZE=${CHUNK_SIZE:-'not found'}"
+    echo "  Exported CHUNK_OVERLAP=${CHUNK_OVERLAP:-'not found'}"
+fi
+
 echo "🔍 Checking environment..."
 
 # Check if config directory exists
@@ -45,7 +60,7 @@ pip install --upgrade pip
 
 # If the lockfile contains CUDA-specific torch wheels (+cu), install non-torch deps first,
 # then install torch/vision/audio from the CUDA index without pinning the local '+cu' build.
-PYTORCH_INDEX_DEFAULT="https://download.pytorch.org/whl/cu124"
+PYTORCH_INDEX_DEFAULT="https://download.pytorch.org/whl/cu126"
 PYTORCH_INDEX="${TORCH_CUDA_INDEX_URL:-$PYTORCH_INDEX_DEFAULT}"
 if grep -qE '^(torch|torchvision|torchaudio)==.*\+cu' config/requirements.lock; then
     echo "🔧 Detected CUDA wheels in lockfile. Installing non-torch deps first..."
