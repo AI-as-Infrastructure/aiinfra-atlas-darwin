@@ -2,7 +2,7 @@ Darwin Corpus Vector Store Creation Statistics
 ============================================
 
 Collection: darwin
-Created: 2025-08-22 09:49:52
+Created: 2025-08-22 13:03:14
 
 Model Information
 ---------------
@@ -19,24 +19,24 @@ Batch Size: 100
 
 Document Statistics
 ------------------
-Total Letters Processed: 16
-Total Chunks Created: 28
-Total Characters: 28,676
-Total Words: 5,501
+Total Letters Processed: 15,239
+Total Chunks Created: 25,813
+Total Characters: 25,241,818
+Total Words: 4,541,143
 Skipped Letters: 0
-Successful Batches: 1
+Successful Batches: 259
 
 Average Statistics
 ----------------
-Average Chunks per Letter: 1.8
-Average Characters per Chunk: 1024.1
-Average Words per Chunk: 196.5
+Average Chunks per Letter: 1.7
+Average Characters per Chunk: 977.9
+Average Words per Chunk: 175.9
 
 Processing Statistics
 -------------------
-Total Processing Time: 4.21 seconds
-Average Time per Letter: 0.26 seconds
-Chunks per Second: 6.6
+Total Processing Time: 3675.57 seconds
+Average Time per Letter: 0.24 seconds
+Chunks per Second: 7.0
 
 System Information
 ----------------

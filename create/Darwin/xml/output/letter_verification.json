@@ -3,45 +3,45 @@
     "status": "SUCCESS",
     "count": 3,
     "sample_letters": [
-      "DCP-LETT-4",
-      "DCP-LETT-4",
-      "DCP-LETT-7"
+      "DCP-LETT-13703",
+      "DCP-LETT-13402",
+      "DCP-LETT-10313"
     ]
   },
   "species": {
     "status": "SUCCESS",
     "count": 3,
     "sample_letters": [
-      "DCP-LETT-4",
-      "DCP-LETT-9",
-      "DCP-LETT-3"
+      "DCP-LETT-7820",
+      "DCP-LETT-9479A",
+      "DCP-LETT-8086A"
     ]
   },
   "natural selection": {
     "status": "SUCCESS",
     "count": 3,
     "sample_letters": [
-      "DCP-LETT-4",
-      "DCP-LETT-7",
-      "DCP-LETT-4"
+      "DCP-LETT-13703",
+      "DCP-LETT-10313",
+      "DCP-LETT-8211F"
     ]
   },
   "voyage": {
     "status": "SUCCESS",
     "count": 3,
     "sample_letters": [
-      "DCP-LETT-4",
-      "DCP-LETT-7",
-      "DCP-LETT-4"
+      "DCP-LETT-13703",
+      "DCP-LETT-13402",
+      "DCP-LETT-376"
     ]
   },
   "Beagle": {
     "status": "SUCCESS",
     "count": 3,
     "sample_letters": [
-      "DCP-LETT-4",
-      "DCP-LETT-7",
-      "DCP-LETT-3"
+      "DCP-LETT-13703",
+      "DCP-LETT-7807",
+      "DCP-LETT-13402"
     ]
   }
 }
