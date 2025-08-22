@@ -7,6 +7,7 @@ import logging
 import asyncio
 import json
 import re
+import time
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -16,6 +17,8 @@ from langchain_core.documents.base import Document
 
 from backend.retrievers.base_retriever import BaseRetriever
 from backend.modules.hybrid_search import rrf_merge
+from backend.telemetry.spans import trace_operation
+from backend.telemetry.constants import SpanNames, OpenInferenceSpanKind
 
 try:
     from rank_bm25 import BM25Okapi
@@ -335,48 +338,183 @@ class DarwinRetriever(BaseRetriever):
         k = kwargs.get("k", 10)
         direction_filter = None
         time_period_filter = None
+        session_id = kwargs.get("session_id") or (config or {}).get("session_id")
+        qa_id = kwargs.get("qa_id") or (config or {}).get("qa_id")
+        
         if config and isinstance(config, dict):
             direction_filter = config.get("direction_filter")
             time_period_filter = config.get("time_period_filter")
+            
         filter_dict = self._build_filter_dict(direction_filter, time_period_filter)
         search_type = (
             (config or {}).get("search_type")
             or (self.config or {}).get("search_type", self.default_search_type)
         )
-        if search_type == "hybrid" and self._bm25_ready:
-            per_side = max(k * 10, 100)
-            dense_ranked = self._dense_search_ids(query, per_side, filter_dict)
-            bm25_ranked = self._bm25_search_ids(query, per_side)
-            if not dense_ranked and not bm25_ranked:
-                return []
-            fused_ids = rrf_merge(dense_ranked, bm25_ranked, k=60, top_k=k)
-            return self._materialize_docs_by_ids(fused_ids, filter_dict)
-        return self.vector_store.similarity_search(query=query, k=k, filter=filter_dict)
+        
+        # Create telemetry span for the retrieval operation
+        with trace_operation(
+            "atlas.retrieval",
+            attributes={
+                "search_type": search_type,
+                "k": k,
+                "direction_filter": direction_filter or "all",
+                "time_period_filter": time_period_filter or "all",
+                "bm25_ready": self._bm25_ready,
+                "query_length": len(query),
+            },
+            session_id=session_id,
+            qa_id=qa_id,
+            openinference_kind=OpenInferenceSpanKind.RETRIEVER,
+            input_data=query
+        ) as span:
+            
+            if search_type == "hybrid" and self._bm25_ready:
+                span.set_attribute("hybrid_search.enabled", True)
+                per_side = max(k * 10, 100)
+                span.set_attribute("hybrid_search.per_side_candidates", per_side)
+                
+                # Time dense search
+                dense_start = time.time()
+                dense_ranked = self._dense_search_ids(query, per_side, filter_dict)
+                dense_time = time.time() - dense_start
+                
+                # Time BM25 search
+                bm25_start = time.time()
+                bm25_ranked = self._bm25_search_ids(query, per_side)
+                bm25_time = time.time() - bm25_start
+                
+                # Add search component metrics
+                span.set_attribute("dense_search.candidates", len(dense_ranked))
+                span.set_attribute("dense_search.time_ms", dense_time * 1000)
+                span.set_attribute("bm25_search.candidates", len(bm25_ranked))
+                span.set_attribute("bm25_search.time_ms", bm25_time * 1000)
+                
+                if not dense_ranked and not bm25_ranked:
+                    span.set_attribute("result.empty", True)
+                    return []
+                
+                # Time RRF fusion and capture detailed metrics
+                fusion_start = time.time()
+                fused_ids = rrf_merge(dense_ranked, bm25_ranked, k=60, top_k=k)
+                fusion_time = time.time() - fusion_start
+                
+                # Calculate fusion statistics
+                dense_ids = set(doc_id for doc_id, _ in dense_ranked)
+                bm25_ids = set(doc_id for doc_id, _ in bm25_ranked)
+                overlap_count = len(dense_ids & bm25_ids)
+                unique_dense = len(dense_ids - bm25_ids)
+                unique_bm25 = len(bm25_ids - dense_ids)
+                
+                span.set_attribute("rrf_fusion.time_ms", fusion_time * 1000)
+                span.set_attribute("rrf_fusion.k_constant", 60)
+                span.set_attribute("rrf_fusion.output_count", len(fused_ids))
+                span.set_attribute("rrf_fusion.overlap_count", overlap_count)
+                span.set_attribute("rrf_fusion.unique_dense", unique_dense)
+                span.set_attribute("rrf_fusion.unique_bm25", unique_bm25)
+                span.set_attribute("rrf_fusion.total_unique_docs", len(dense_ids | bm25_ids))
+                
+                # Materialize documents
+                docs = self._materialize_docs_by_ids(fused_ids, filter_dict)
+                span.set_attribute("final_documents", len(docs))
+                return docs
+            else:
+                span.set_attribute("hybrid_search.enabled", False)
+                span.set_attribute("fallback_search", "vector_only")
+                docs = self.vector_store.similarity_search(query=query, k=k, filter=filter_dict)
+                span.set_attribute("final_documents", len(docs))
+                return docs
+
 
     def invoke(self, input: str, config: Optional[Dict] = None, **kwargs) -> List[Document]:
-        # Synchronous hybrid search implementation
+        # Synchronous implementation with same logic as async version
         k = kwargs.get("k", 10)
         direction_filter = None
         time_period_filter = None
+        session_id = kwargs.get("session_id") or (config or {}).get("session_id")
+        qa_id = kwargs.get("qa_id") or (config or {}).get("qa_id")
+        
         if config and isinstance(config, dict):
             direction_filter = config.get("direction_filter")
             time_period_filter = config.get("time_period_filter")
+            
         filter_dict = self._build_filter_dict(direction_filter, time_period_filter)
         search_type = (
             (config or {}).get("search_type")
             or (self.config or {}).get("search_type", self.default_search_type)
         )
         
-        if search_type == "hybrid" and self._bm25_ready:
-            per_side = max(k * 10, 100)
-            dense_ranked = self._dense_search_ids(input, per_side, filter_dict)
-            bm25_ranked = self._bm25_search_ids(input, per_side)
-            if not dense_ranked and not bm25_ranked:
-                return []
-            fused_ids = rrf_merge(dense_ranked, bm25_ranked, k=60, top_k=k)
-            return self._materialize_docs_by_ids(fused_ids, filter_dict)
-        
-        return self.vector_store.similarity_search(query=input, k=k, filter=filter_dict)
+        # Create telemetry span for the retrieval operation
+        with trace_operation(
+            "atlas.retrieval",
+            attributes={
+                "search_type": search_type,
+                "k": k,
+                "direction_filter": direction_filter or "all",
+                "time_period_filter": time_period_filter or "all",
+                "bm25_ready": self._bm25_ready,
+                "query_length": len(input),
+            },
+            session_id=session_id,
+            qa_id=qa_id,
+            openinference_kind=OpenInferenceSpanKind.RETRIEVER,
+            input_data=input
+        ) as span:
+            
+            if search_type == "hybrid" and self._bm25_ready:
+                span.set_attribute("hybrid_search.enabled", True)
+                per_side = max(k * 10, 100)
+                span.set_attribute("hybrid_search.per_side_candidates", per_side)
+                
+                # Time dense search
+                dense_start = time.time()
+                dense_ranked = self._dense_search_ids(input, per_side, filter_dict)
+                dense_time = time.time() - dense_start
+                
+                # Time BM25 search
+                bm25_start = time.time()
+                bm25_ranked = self._bm25_search_ids(input, per_side)
+                bm25_time = time.time() - bm25_start
+                
+                # Add search component metrics
+                span.set_attribute("dense_search.candidates", len(dense_ranked))
+                span.set_attribute("dense_search.time_ms", dense_time * 1000)
+                span.set_attribute("bm25_search.candidates", len(bm25_ranked))
+                span.set_attribute("bm25_search.time_ms", bm25_time * 1000)
+                
+                if not dense_ranked and not bm25_ranked:
+                    span.set_attribute("result.empty", True)
+                    return []
+                
+                # Time RRF fusion and capture detailed metrics
+                fusion_start = time.time()
+                fused_ids = rrf_merge(dense_ranked, bm25_ranked, k=60, top_k=k)
+                fusion_time = time.time() - fusion_start
+                
+                # Calculate fusion statistics
+                dense_ids = set(doc_id for doc_id, _ in dense_ranked)
+                bm25_ids = set(doc_id for doc_id, _ in bm25_ranked)
+                overlap_count = len(dense_ids & bm25_ids)
+                unique_dense = len(dense_ids - bm25_ids)
+                unique_bm25 = len(bm25_ids - dense_ids)
+                
+                span.set_attribute("rrf_fusion.time_ms", fusion_time * 1000)
+                span.set_attribute("rrf_fusion.k_constant", 60)
+                span.set_attribute("rrf_fusion.output_count", len(fused_ids))
+                span.set_attribute("rrf_fusion.overlap_count", overlap_count)
+                span.set_attribute("rrf_fusion.unique_dense", unique_dense)
+                span.set_attribute("rrf_fusion.unique_bm25", unique_bm25)
+                span.set_attribute("rrf_fusion.total_unique_docs", len(dense_ids | bm25_ids))
+                
+                # Materialize documents
+                docs = self._materialize_docs_by_ids(fused_ids, filter_dict)
+                span.set_attribute("final_documents", len(docs))
+                return docs
+            else:
+                span.set_attribute("hybrid_search.enabled", False)
+                span.set_attribute("fallback_search", "vector_only")
+                docs = self.vector_store.similarity_search(query=input, k=k, filter=filter_dict)
+                span.set_attribute("final_documents", len(docs))
+                return docs
 
     async def ainvoke(self, input: str, config: Optional[Dict] = None, **kwargs) -> List[Document]:
         return await self._get_relevant_documents(input, config, **kwargs)
