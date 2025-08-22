@@ -1,6 +1,6 @@
 # Retrieval-Augmented Generation (RAG) – Search Pipeline
 
-This document explains, in reader-friendly terms, how ATLAS Darwin performs **Retrieval-Augmented Generation (RAG)** search across the Darwin Correspondence corpus using hybrid search architecture.  Developer-level details are provided in call-outs.
+This document explains, in reader-friendly terms, how ATLAS performs **Retrieval-Augmented Generation (RAG)** search across historical document corpora using hybrid search architecture. Developer-level details are provided in call-outs.
 
 ## 1 Pipeline Overview
 
@@ -14,9 +14,9 @@ This document explains, in reader-friendly terms, how ATLAS Darwin performs **Re
 └► 3. LLM context builder (chat memory + citations) ─► Answer
 ```
 
-1. **Hybrid search** combines dense vector search (HNSW) with sparse BM25 lexical search to capture both semantic similarity and exact term matches across Darwin's correspondence.
+1. **Hybrid search** combines dense vector search (HNSW) with sparse BM25 lexical search to capture both semantic similarity and exact term matches across historical documents.
 2. **Reciprocal Rank Fusion** merges and re-ranks results from both search methods, balancing semantic understanding with lexical precision.
-3. The **LLM** receives the top-K passages plus running chat-memory to generate answers with rich Darwin metadata and scholarly citations.
+3. The **LLM** receives the top-K passages plus running chat-memory to generate answers with rich document metadata and scholarly citations.
 
 ---
 
@@ -24,9 +24,9 @@ This document explains, in reader-friendly terms, how ATLAS Darwin performs **Re
 
 **Dense Vector Component:**
 * **Backend:** [`langchain_community.vectorstores.Chroma`] with HNSW indexing
-* **Model:** `Livingwithmachines/bert_1760_1900` (historical text optimized)
-* **Pooling:** `mean+max` strategy for optimal performance
-* **Chunks:** 1,200-character sliding window (`chunk_size = 1200`, `chunk_overlap = 200`)
+* **Model:** Configurable embedding model (optimized for domain-specific text)
+* **Pooling:** Configurable pooling strategy for optimal performance
+* **Chunks:** Configurable character sliding window (`chunk_size` and `chunk_overlap`)
 
 **Sparse Lexical Component:**
 * **Algorithm:** BM25 (Best Matching 25) for exact term matching
@@ -34,11 +34,11 @@ This document explains, in reader-friendly terms, how ATLAS Darwin performs **Re
 * **Storage:** Pre-computed BM25 corpus saved as `bm25_corpus.jsonl`
 
 **Metadata Enhancement:**
-* **TEI Entities:** Person names, places, organizations, and taxonomic terms
-* **Darwin Project URLs:** Canonical scholarly citations with permanent identifiers
-* **Letter Metadata:** Dates, correspondents, archival locations
+* **Document Entities:** Person names, places, organizations, and domain-specific terms
+* **Canonical URLs:** Scholarly citations with permanent identifiers (when available)
+* **Document Metadata:** Dates, authors, archival locations, and corpus-specific fields
 
-Vector-store creation is handled by `create/Darwin/xml/create_darwin_store.py`.  Each run emits a **manifest** (stats & config) under `create/Darwin/xml/output/darwin.txt` – this allows the retriever generator to stay in sync with the store.
+Vector-store creation is handled by corpus-specific creation scripts. Each run emits a **manifest** (stats & config) that allows the retriever generator to stay in sync with the store.
 
 ---
 
@@ -62,27 +62,27 @@ rrf_scores = reciprocal_rank_fusion([vector_results, bm25_results], k=60)
 
 Environment variables:
 
-| Variable | Purpose | Darwin Default |
+| Variable | Purpose | Default |
 |----------|---------|----------------|
-| `LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS` | Vector candidates fetched | **120** |
-| `LARGE_RETRIEVAL_SIZE_ALL_CORPUS` | N/A (Darwin is single corpus) | **80** |
+| `LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS` | Vector candidates fetched (single corpus) | **120** |
+| `LARGE_RETRIEVAL_SIZE_ALL_CORPUS` | Vector candidates fetched (multi-corpus) | **80** |
 | `SEARCH_K` | Final top-K after RRF fusion | **20** (via target config) |
 
 Change these in `.env.*` or the target config to trade recall vs. speed.
 
 ---
 
-## 4 Darwin Correspondence Specifics
+## 4 Corpus Architecture
 
-**Single Corpus Architecture:**
-* Darwin ATLAS focuses on a single, unified corpus of ~15,000 letters
-* No corpus filtering required—all searches span the complete correspondence
-* Simplified retrieval pipeline optimized for historical letter structure
+**Single vs. Multi-Corpus Support:**
+* ATLAS supports both single corpus and multi-corpus configurations
+* Corpus filtering available when multiple document collections are indexed
+* Retrieval pipeline adapts to corpus structure and document types
 
-**Letter-Optimized Chunking:**
-* Chunks respect Victorian letter conventions (salutations, body, signatures)
-* Larger chunk size (1,200 chars) accommodates longer historical sentences
-* Higher overlap (200 chars) ensures context preservation across chunk boundaries
+**Document-Optimized Chunking:**
+* Chunks respect document structure (sections, paragraphs, natural boundaries)
+* Configurable chunk size accommodates document characteristics
+* Overlap ensures context preservation across chunk boundaries
 
 ---
 
@@ -100,25 +100,25 @@ Because search is stateless, earlier turns do not bias result selection; only th
 
 ## 6 Hybrid Search Benefits
 
-**Why Hybrid Search for Darwin?**
+**Why Hybrid Search for Historical Documents?**
 
-Darwin's correspondence presents unique challenges that hybrid search addresses:
+Historical document collections present unique challenges that hybrid search addresses:
 
 | Challenge | Dense Vector Strength | BM25 Lexical Strength |
 |-----------|----------------------|------------------------|
-| Scientific terminology | Semantic relationships | Exact species names |
-| Historical language | Contextual understanding | Period-specific terms |
+| Domain terminology | Semantic relationships | Exact technical terms |
+| Historical language | Contextual understanding | Period-specific vocabulary |
 | Person names | Name variations | Exact name matching |
 | Geographic references | Related locations | Precise place names |
-| Correspondence networks | Conceptual connections | Specific correspondent matching |
+| Document networks | Conceptual connections | Specific entity matching |
 
 **RRF Fusion Advantages:**
 * **Balanced results:** Neither search method dominates inappropriately
 * **Complementary strengths:** Semantic similarity + lexical precision
 * **Robust ranking:** Multiple ranking signals reduce single-point failures
-* **Historical optimization:** Particularly effective for 19th-century correspondence
+* **Domain optimization:** Particularly effective for specialized historical collections
 
-The final ranked list ensures scholars get both conceptually related passages and exact terminological matches.
+The final ranked list ensures researchers get both conceptually related passages and exact terminological matches.
 
 ---
 
@@ -133,26 +133,24 @@ Use **Phoenix** to monitor the balance between dense and sparse retrieval compon
 
 ---
 
-## 8 Darwin Configuration Cheatsheet
+## 8 Configuration Reference
 
-| Setting | Location | Darwin Value |
-|---------|----------|--------------|
-| Vector store path | `.env` → `CHROMA_PERSIST_DIRECTORY` | `backend/targets/chroma_db` |
-| Collection name | `.env` → `CHROMA_COLLECTION_NAME` | `darwin` |
-| Embedding model | `.env` → `EMBEDDING_MODEL` | `Livingwithmachines/bert_1760_1900` |
-| Pooling strategy | `.env` → `POOLING` | `mean+max` |
-| Chunk size | `.env` → `CHUNK_SIZE` | `1200` |
-| Chunk overlap | `.env` → `CHUNK_OVERLAP` | `200` |
-| Vector candidates | `.env` → `LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS` | `120` |
-| Final top-K | `backend/targets/<target>.txt` → `SEARCH_K` | `20` |
-| Darwin XML (full) | `.env` → `DARWIN_XML_FULL_PATH` | `../../../../darwin_sources_FULL/xml/letters` |
-| Darwin XML (test) | `.env` → `DARWIN_XML_TEST_PATH` | `../../../../darwin_sources_TEST/xml/letters` |
+| Setting | Location | Purpose |
+|---------|----------|----------|
+| Vector store path | `.env` → `CHROMA_PERSIST_DIRECTORY` | Chroma database location |
+| Collection name | `.env` → `CHROMA_COLLECTION_NAME` | Vector collection identifier |
+| Embedding model | `.env` → `EMBEDDING_MODEL` | HuggingFace model for embeddings |
+| Pooling strategy | `.env` → `POOLING` | Embedding pooling method |
+| Chunk size | `.env` → `CHUNK_SIZE` | Document chunk size (characters) |
+| Chunk overlap | `.env` → `CHUNK_OVERLAP` | Overlap between chunks (characters) |
+| Vector candidates | `.env` → `LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS` | Pre-fusion candidate count |
+| Final top-K | `backend/targets/<target>.txt` → `SEARCH_K` | Final result count |
 
 **Build Commands:**
-* `make vs-full` - Create full Darwin corpus vector store (~15,000 letters, ~65 min)
-* `make vs-test` - Create test Darwin corpus vector store (~16 letters, ~4 min)
+* `make vs-full` - Create full corpus vector store
+* `make vs-test` - Create test corpus vector store
 * `make r` - Generate corresponding retriever with hybrid search capabilities
 
 ---
 
-**Key takeaway:** Darwin's hybrid search architecture balances semantic understanding with lexical precision, ensuring scholars find both conceptually related content and exact terminological matches across 15,000+ historical letters. The RRF fusion mechanism prevents either search method from dominating, creating optimal retrieval for 19th-century correspondence research.
+**Key takeaway:** ATLAS hybrid search architecture balances semantic understanding with lexical precision, ensuring researchers find both conceptually related content and exact terminological matches across historical document collections. The RRF fusion mechanism prevents either search method from dominating, creating optimal retrieval for specialized research domains.
