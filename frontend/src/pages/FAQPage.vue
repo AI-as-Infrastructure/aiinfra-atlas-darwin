@@ -34,68 +34,70 @@ const faqs = [
     question: "What is ATLAS and what is its purpose?",
     answer: `
       <p>
-        ATLAS (Analysis and Testing of Language Models for Archival Systems) is a research platform designed to explore how large language models and AI can enhance historical research using parliamentary archives.
+        ATLAS (Analysis and Testing of Language Models for Archival Systems) is a research platform designed to explore how large language models and AI can enhance historical research using archival collections. This instance provides AI-assisted access to historical correspondence and documents.
       </p>
       
       <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Core Purpose</h4>
 
       <ul style="color: black;">
-        <li style="color: black;"><strong style="color: black;">Research Tool:</strong> <span style="color: black;">Providing humanities and social science researchers with AI-assisted access to historical parliamentary records</span></li>
-        <li style="color: black;"><strong style="color: black;">Educational Framework:</strong> <span style="color: black;">Helping researchers understand the nature of LLM technology and AI product development through direct experience</span></li>
+        <li style="color: black;"><strong style="color: black;">Research Tool:</strong> <span style="color: black;">Providing scholars with AI-assisted access to historical archives for research</span></li>
+        <li style="color: black;"><strong style="color: black;">Educational Framework:</strong> <span style="color: black;">Helping researchers understand the nature of LLM technology and AI product development through direct experience with historical texts</span></li>
         <li style="color: black;"><strong style="color: black;">Experimental Platform:</strong> <span style="color: black;">Creating a controlled environment to evaluate different AI approaches to historical text analysis</span></li>
         <li style="color: black;"><strong style="color: black;">Methodological Investigation:</strong> <span style="color: black;">Studying how researchers interact with AI systems when conducting historical research</span></li>
-        <li style="color: black;"><strong style="color: black;">Technical Framework:</strong> <span style="color: black;">Developing best practices for Retrieval Augmented Generation (RAG) systems in humanities computing</span></li>
-        <li style="color: black;"><strong style="color: black;">Open Source Continuation:</strong> <span style="color: black;">Exploring the feasibility of continuing traditions of open source software development enjoyed by previous generations of digital humanities researchers</span></li>
+        <li style="color: black;"><strong style="color: black;">Technical Framework:</strong> <span style="color: black;">Developing best practices for hybrid search (dense + sparse) RAG systems in humanities computing</span></li>
+        <li style="color: black;"><strong style="color: black;">Open Source Continuation:</strong> <span style="color: black;">Exploring the feasibility of continuing traditions of open source software development in digital humanities</span></li>
       </ul>
       
       <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Key Features</h4>
       <ul style="color: black;">
-        <li style="color: black;"><strong style="color: black;">Historical Document Access:</strong> <span style="color: black;">Vector search across parliamentary Hansard records from the UK, New Zealand, and Australia from 1901 onward</span></li>
-        <li style="color: black;"><strong style="color: black;">Specialized Embeddings:</strong> <span style="color: black;">Using historical language models trained on 19th-century text to better capture period-specific language</span></li>
-        <li style="color: black;"><strong style="color: black;">Configurable Architecture:</strong> <span style="color: black;">Test Target system allowing controlled experiments with different models and retrieval settings</span></li>
-        <li style="color: black;"><strong style="color: black;">Integrated Analysis:</strong> <span style="color: black;">Comprehensive telemetry and user feedback collection for continuous improvement</span></li>
+        <li style="color: black;"><strong style="color: black;">Historical Document Access:</strong> <span style="color: black;">Hybrid search across archival collections with rich metadata and structured content</span></li>
+        <li style="color: black;"><strong style="color: black;">Historical Language Models:</strong> <span style="color: black;">Using models trained on period-appropriate text for optimal historical language understanding</span></li>
+        <li style="color: black;"><strong style="color: black;">Rich Metadata:</strong> <span style="color: black;">Structured encoding of person names, places, organizations, and subject-specific terms with canonical URLs</span></li>
+        <li style="color: black;"><strong style="color: black;">Scholarly Citations:</strong> <span style="color: black;">Automatic generation of proper scholarly citations with archival locations and permanent identifiers</span></li>
+        <li style="color: black;"><strong style="color: black;">Hybrid Search:</strong> <span style="color: black;">Combines dense vector search (semantic similarity) with BM25 lexical search (exact term matching) for optimal recall</span></li>
       </ul>
     `
   },
   {
-    question: "What is Retrieval Augmented Generation (RAG)?",
+    question: "What is Hybrid Search RAG and how does it work in ATLAS?",
     answer: `
       <p>
-        Retrieval Augmented Generation (RAG) is a hybrid AI architecture that combines the knowledge retrieval capabilities of search systems with the reasoning and language generation abilities of large language models (LLMs):
+        ATLAS uses a Hybrid Search RAG (Retrieval Augmented Generation) architecture that combines multiple search methods to find the most relevant passages from historical sources before generating answers:
       </p>
       <ul>
-        <li><strong>Core Process:</strong> RAG retrieves relevant information from a knowledge base, then passes this information as context to an LLM to generate more accurate and grounded responses</li>
-        <li><strong>Vector-Based Retrieval:</strong> Documents are converted into vector embeddings that capture their semantic meaning, allowing for similarity-based search</li>
-        <li><strong>Context Enhancement:</strong> The retrieved documents provide the LLM with specific knowledge it may not have learned during its training</li>
+        <li><strong>Dense Vector Search:</strong> Uses semantic embeddings to find conceptually related content, even when different words are used</li>
+        <li><strong>Sparse BM25 Search:</strong> Performs exact term matching to ensure precise terminology, names, and phrases are captured</li>
+        <li><strong>Reciprocal Rank Fusion:</strong> Combines results from both methods using advanced scoring to balance semantic similarity with lexical precision</li>
+        <li><strong>Context Enhancement:</strong> The fused results provide the LLM with the most relevant historical sources as context for generating historically grounded responses</li>
       </ul>
       
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Cost and Compute Savings</h4>
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Why Hybrid Search for Historical Sources?</h4>
       <p>
-        RAG offers significant advantages over alternative approaches:
+        Historical documents present unique challenges that hybrid search addresses:
       </p>
       <ul>
-        <li><strong>Reduced Model Size:</strong> Using external knowledge allows smaller, more efficient LLMs to achieve similar performance to much larger models</li>
-        <li><strong>Lower Inference Costs:</strong> Compared to fully fine-tuned models, RAG systems can be 10-100x less expensive to run at scale</li>
-        <li><strong>Minimal Training Requirements:</strong> Unlike full fine-tuning, RAG doesn't require retraining the LLM, only indexing the documents</li>
-        <li><strong>Dynamic Knowledge:</strong> Adding new information only requires updating the knowledge base, not retraining the entire model</li>
-        <li><strong>Efficient Infrastructure:</strong> Vector search is computationally inexpensive compared to running larger language models or processing full text</li>
+        <li><strong>Subject Terminology:</strong> Dense vectors capture semantic relationships while BM25 ensures exact technical terms and names are found</li>
+        <li><strong>Historical Language:</strong> Vector search handles language evolution while lexical search preserves period-specific terminology</li>
+        <li><strong>Person Names:</strong> Semantic search finds name variations while BM25 matches exact spellings</li>
+        <li><strong>Geographic References:</strong> Dense search connects related locations while sparse search finds precise place names</li>
+        <li><strong>Document Networks:</strong> Vector embeddings reveal conceptual connections while BM25 matches specific names and terms</li>
       </ul>
       
       <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Limitations and Challenges</h4>
       <p>
-        Despite its benefits, RAG has several important limitations:
+        Despite its benefits, hybrid search RAG has important limitations:
       </p>
       <ul>
-        <li><strong>Context Window Constraints:</strong> The amount of retrieved information that can be used is limited by the LLM's context window</li>
-        <li><strong>Retrieval Quality Dependency:</strong> The system is only as good as its retrieval component; if relevant information isn't retrieved, the LLM cannot use it</li>
-        <li><strong>Hallucination Risk:</strong> LLMs may still generate fabricated information when the retrieved context is insufficient or ambiguous</li>
-        <li><strong>Reasoning Bottlenecks:</strong> Complex multi-hop reasoning across documents remains challenging for current RAG implementations</li>
-        <li><strong>Embedding Limitations:</strong> The quality of vector embeddings affects retrieval performance, and topic drift can occur as concepts evolve over time</li>
-        <li><strong>Context Integration:</strong> LLMs sometimes struggle to effectively synthesize information from multiple retrieved documents with conflicting data</li>
+        <li><strong>Context Window Constraints:</strong> The amount of retrieved information is limited by the LLM's context window</li>
+        <li><strong>Retrieval Quality Dependency:</strong> Both search methods must find relevant content; poor retrieval affects answer quality</li>
+        <li><strong>Hallucination Risk:</strong> LLMs may generate information not found in the historical sources when context is insufficient</li>
+        <li><strong>Historical Terminology Gaps:</strong> Some historical terms may not be well-represented in modern training data</li>
+        <li><strong>Complex Reasoning:</strong> Multi-hop reasoning across multiple documents remains challenging</li>
+        <li><strong>Citation Boundaries:</strong> The system may struggle with conflicting information across different sources or time periods</li>
       </ul>
       
       <p>
-        ATLAS uses RAG as its core architecture, allowing it to generate historically grounded responses by retrieving and citing relevant parliamentary records while maintaining relatively modest computational requirements compared to full-text search or entirely LLM-based approaches.
+        ATLAS uses hybrid search RAG to provide scholars with AI-assisted access to historical archives, generating historically grounded responses with proper scholarly citations while maintaining computational efficiency compared to alternatives.
       </p>
     `
   },
@@ -222,143 +224,189 @@ const faqs = [
       <p>
         ATLAS provides access to historical document collections that have been processed into vector embeddings to enable semantic search. The specific content depends on the ATLAS instance configuration.
       </p>
-      <p>
-        The system automatically identifies which collection a document belongs to, allowing for targeted searches across specific document collections or all available sources.
-      </p>
-    `
-  },
-  {
-    question: "How does the corpus filter work?",
-    answer: `
-      <p>
-        The corpus filter allows you to limit your search to specific document collections when multiple collections are available:
-      </p>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Archival Collections</h4>
       <ul>
-        <li><strong>All Sources:</strong> Searches across all available document collections</li>
-        <li><strong>Specific Collections:</strong> Limits search to individual document collections as configured in the system</li>
-      </ul>
-      <p>
-        The corpus filter is applied at the vector database query level using metadata filtering. The system will only show the corpus selector if:
-      </p>
-      <ol>
-        <li>The backend is configured to support corpus filtering (via the <code>SUPPORTS_CORPUS_FILTERING</code> flag)</li>
-        <li>Multiple corpus options are available in the vector store</li>
-      </ol>
-      <p>
-        If corpus filtering is not supported, the UI will automatically hide the selector and search across all available sources.
-      </p>
-
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Document Counts and Semantic Similarity</h4>
-      <p>
-        When using corpus filters, you may notice differences in the number of documents retrieved:
-      </p>
-      <ul>
-        <li><strong>Unfiltered Searches:</strong> Will return the maximum number of documents (e.g., 40) from across all collections, showing the most semantically similar matches regardless of source</li>
-        <li><strong>Filtered Searches:</strong> May return fewer documents because the system maintains the same semantic similarity threshold within each collection</li>
-        <li><strong>Quality Over Quantity:</strong> The system prioritizes semantic relevance over reaching the maximum document count, ensuring that only truly relevant documents are included</li>
-      </ul>
-      <p>
-        This behavior ensures that your search results maintain high quality and relevance, even when filtering to specific document collections.
-      </p>
-    `
-  },
-  {
-    question: "What is HNSW search and how does it relate to the LLM output?",
-    answer: `
-      <p>
-        HNSW (Hierarchical Navigable Small World) is an advanced vector search algorithm used in ATLAS's retrieval system:
-      </p>
-      <ul>
-        <li><strong>Algorithm Purpose:</strong> HNSW creates a multi-layered graph structure that enables extremely fast approximate nearest neighbor searches in high-dimensional vector spaces</li>
-        <li><strong>Speed vs. Accuracy:</strong> It offers an optimal balance between search speed (logarithmic time complexity) and accuracy, making it ideal for real-time RAG systems</li>
-        <li><strong>Redis Implementation:</strong> ATLAS uses Chroma as the vector database with HNSW as the primary search algorithm (configured as "ALGORITHM=FLAT" or "ALGORITHM=HNSW")</li>
+        <li><strong>Historical Documents:</strong> Letters, manuscripts, and other archival materials from established research collections</li>
+        <li><strong>Structured Encoding:</strong> XML markup with metadata for persons, places, organizations, and subject-specific terms</li>
+        <li><strong>Scholarly Standards:</strong> Professionally edited content with archival locations and canonical URLs for citation</li>
+        <li><strong>Temporal Coverage:</strong> Collections spanning specific historical periods relevant to the research focus</li>
       </ul>
       
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">How Search Parameters Affect LLM Output</h4>
-      <p>
-        ATLAS's Test Target configuration controls multiple search parameters that directly impact LLM output quality:
-      </p>
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Rich Metadata</h4>
       <ul>
-        <li><strong>Search K Value:</strong> A configurable parameter that determines how many documents are retrieved from the vector store. Higher values can significantly improve recall, especially for smaller corpora, but must be balanced against potential noise. This value can be adjusted in the Test Target configuration to optimize for different use cases</li>
-        <li><strong>Score Threshold:</strong> Sets a minimum similarity score for retrieved documents, ensuring only relevant context is used</li>
-        <li><strong>Large Retrieval Size:</strong> For initial retrieval before re-ranking, typically 200+ documents to ensure good candidates are considered</li>
-        <li><strong>Citation Limit:</strong> Caps the number of citations shown to users, typically 10-15 sources for readability</li>
+        <li><strong>Network Analysis:</strong> Information about relationships between historical figures and institutions</li>
+        <li><strong>Geographic Data:</strong> Locations mentioned in sources with historical context</li>
+        <li><strong>Subject Terms:</strong> Domain-specific terminology and concepts with structured encoding</li>
+        <li><strong>Chronological Context:</strong> Precise dates linking documents to historical developments</li>
       </ul>
       
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Document Enhancement Pipeline</h4>
       <p>
-        After initial retrieval, ATLAS applies several enhancements:
-      </p>
-      <ol>
-        <li>Retrieves a large initial set (e.g., 200 documents) using vector similarity</li>
-        <li>Applies lightweight re-ranking to prioritize documents with direct term matches</li>
-        <li>Filters the best documents (based on citation limit) to send to the LLM</li>
-        <li>Formats documents with metadata for the LLM to use as context</li>
-      </ol>
-      <p>
-        This pipeline ensures that the LLM receives the most relevant and diverse set of documents while maintaining reasonable computational costs.
+        All content is processed using hybrid search to enable both semantic exploration of concepts and precise retrieval of specific names, places, and technical terms.
       </p>
     `
   },
   {
-    question: "How does fine-tuning improve search quality?",
+    question: "How does corpus filtering work in ATLAS?",
     answer: `
       <p>
-        ATLAS uses fine-tuned embeddings to improve search quality for historical parliamentary records:
+        ATLAS instances can be configured as either single-corpus or multi-corpus systems depending on the research needs:
       </p>
       
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Fine-tuning Process</h4>
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Single Corpus Systems</h4>
       <ul>
-        <li><strong>Base Model:</strong> Starts with a BERT model pre-trained on general text</li>
-        <li><strong>Domain Adaptation:</strong> Fine-tunes the model on parliamentary records to better understand historical language and context</li>
-        <li><strong>Two-Epoch Training:</strong> Uses a two-epoch fine-tuning process to balance between general language understanding and domain-specific knowledge</li>
+        <li><strong>Unified Collections:</strong> All documents treated as one cohesive archive</li>
+        <li><strong>Comprehensive Search:</strong> Every query searches across the entire collection without need for filtering</li>
+        <li><strong>Simplified Interface:</strong> Users don't need to choose between different document types or sources</li>
       </ul>
-
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Vector Store and Model Files</h4>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Multi-Corpus Systems</h4>
       <ul>
-        <li><strong>Default Vector Store:</strong> The repository includes a pre-generated vector store with fine-tuned embeddings</li>
-        <li><strong>Model Files:</strong> The fine-tuned model files are stored in the models directory and are required for optimal search performance</li>
-        <li><strong>Fallback Option:</strong> If the fine-tuned model files are not available, the system will use mean pooling as a fallback strategy</li>
+        <li><strong>Collection Filtering:</strong> Dropdown selector allows users to focus on specific document collections</li>
+        <li><strong>Balanced Retrieval:</strong> When searching "All" sources, system retrieves equal numbers from each corpus</li>
+        <li><strong>Metadata-Based:</strong> Filtering applied at the vector database level using corpus metadata tags</li>
       </ul>
-
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Benefits of Fine-tuning</h4>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Alternative Filtering Approaches</h4>
+      <p>
+        In single-corpus systems, you can still focus your searches using natural language:
+      </p>
       <ul>
-        <li><strong>Better Semantic Understanding:</strong> Improved ability to understand historical language</li>
-        <li><strong>Enhanced Recall:</strong> Better at finding relevant documents, especially for complex or historical queries</li>
-        <li><strong>Consistent Performance:</strong> More reliable search results across different types of parliamentary records</li>
+        <li><strong>Temporal Filtering:</strong> Specify time periods in your queries ("documents from the 1860s", "after major publication")</li>
+        <li><strong>Person Filtering:</strong> Search for documents to/from specific people or involving particular individuals</li>
+        <li><strong>Topic Filtering:</strong> Focus on specific subject areas relevant to the collection</li>
+        <li><strong>Hybrid Search Benefits:</strong> The system automatically finds both semantic matches and exact name/date matches</li>
       </ul>
+      
+      <p>
+        This approach provides natural, research-oriented ways to explore historical collections without artificial corpus boundaries.
+      </p>
     `
   },
   {
-    question: "How can I get the best search results?",
+    question: "How does ATLAS's hybrid search work technically?",
     answer: `
       <p>
-        To get the most relevant and comprehensive search results in ATLAS:
+        ATLAS combines two complementary search technologies to provide optimal retrieval from historical sources:
+      </p>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Dense Vector Search (HNSW)</h4>
+      <ul>
+        <li><strong>Algorithm:</strong> HNSW (Hierarchical Navigable Small World) provides extremely fast approximate nearest neighbor search in high-dimensional vector spaces</li>
+        <li><strong>Historical Embeddings:</strong> Uses embedding models trained on period-appropriate text for optimal historical language understanding</li>
+        <li><strong>Semantic Matching:</strong> Finds conceptually related content even when different terminology is used</li>
+        <li><strong>Chroma Storage:</strong> Vector database with HNSW indexing for sub-millisecond search performance</li>
+      </ul>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Sparse Lexical Search (BM25)</h4>
+      <ul>
+        <li><strong>Algorithm:</strong> Best Matching 25 (BM25) for precise term frequency analysis and exact matching</li>
+        <li><strong>Lexical Precision:</strong> Captures specific names, scientific terms, and exact phrases that embeddings might miss</li>
+        <li><strong>Complement to Vectors:</strong> Ensures retrieval of documents with exact terminology matches</li>
+        <li><strong>Pre-computed Index:</strong> BM25 corpus stored as <code>bm25_corpus.jsonl</code> for fast lookup</li>
+      </ul>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Reciprocal Rank Fusion (RRF)</h4>
+      <p>
+        The fusion process combines results from both search methods:
+      </p>
+      <ul>
+        <li><strong>RRF Scoring:</strong> Uses formula <code>score = 1/(rank + k)</code> where k=60 balances rank position importance</li>
+        <li><strong>Result Merging:</strong> Combines unique documents from both searches, summing RRF scores for duplicates</li>
+        <li><strong>Balanced Weighting:</strong> Equal importance given to semantic similarity and lexical precision</li>
+        <li><strong>Final Ranking:</strong> Top results sent to LLM ensure both conceptual relevance and exact term matches</li>
+      </ul>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Configurable Parameters</h4>
+      <ul>
+        <li><strong>Search K Value:</strong> Number of final documents sent to LLM (configurable per instance)</li>
+        <li><strong>Vector Candidates:</strong> Initial candidates from dense search (typically 100-200)</li>
+        <li><strong>BM25 Candidates:</strong> Similar number from lexical search for balance</li>
+        <li><strong>Chunking Strategy:</strong> Document segmentation optimized for the specific document types</li>
+        <li><strong>Rich Metadata:</strong> Structured entities and canonical URLs included in context</li>
+      </ul>
+      
+      <p>
+        This hybrid approach ensures researchers receive both conceptually related passages and exact terminological matches, with proper scholarly citations from authoritative sources.
+      </p>
+    `
+  },
+  {
+    question: "How do historical language models improve ATLAS searches?",
+    answer: `
+      <p>
+        ATLAS can use historical language models specifically trained on period-appropriate text to improve search quality for historical documents:
+      </p>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Historical Language Training</h4>
+      <ul>
+        <li><strong>Period-Specific Models:</strong> BERT models pre-trained on text from relevant historical periods</li>
+        <li><strong>Contextual Understanding:</strong> Better comprehension of historical terminology, social conventions, and period-specific language</li>
+        <li><strong>Language Evolution:</strong> Captures how terminology and usage changed over time</li>
+      </ul>
+
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Search Benefits</h4>
+      <ul>
+        <li><strong>Domain Terminology:</strong> Better understanding of subject-specific terms from the historical period</li>
+        <li><strong>Document Conventions:</strong> Improved comprehension of historical writing conventions and formalities</li>
+        <li><strong>Name Recognition:</strong> Better handling of historical person names and their various forms</li>
+        <li><strong>Context Sensitivity:</strong> Understanding of how concepts were discussed before modern standardization</li>
+      </ul>
+
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Technical Implementation</h4>
+      <ul>
+        <li><strong>Advanced Pooling:</strong> Pooling strategies optimized for historical language models</li>
+        <li><strong>High-Dimensional Vectors:</strong> Dense embeddings capturing nuanced semantic relationships</li>
+        <li><strong>Hybrid Compatibility:</strong> Works seamlessly with BM25 lexical search for comprehensive retrieval</li>
+        <li><strong>Hardware Optimization:</strong> Includes fallback mechanisms for different hardware configurations</li>
+      </ul>
+      
+      <p>
+        These historically-trained models ensure that searches for period concepts find semantically related discussions even when historical sources used different terminology or phrasing conventions of their era.
+      </p>
+    `
+  },
+  {
+    question: "How can I get the best search results in ATLAS?",
+    answer: `
+      <p>
+        To get the most relevant results when searching historical sources in ATLAS:
       </p>
       
       <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Query Formulation</h4>
       <ul>
-        <li><strong>Be Specific:</strong> Use clear, focused queries that target specific aspects of parliamentary debates</li>
-        <li><strong>Use Historical Context:</strong> Include relevant time periods or historical events in your queries</li>
-        <li><strong>Consider Terminology:</strong> Use period-appropriate language when possible, as the system is fine-tuned on historical text</li>
+        <li><strong>Use Historical Terminology:</strong> Consider period-appropriate language and terminology when possible</li>
+        <li><strong>Include Context:</strong> Reference specific works, events, or periods relevant to your research</li>
+        <li><strong>Be Specific:</strong> Use precise terms when available rather than general categories</li>
+        <li><strong>Include Names:</strong> Mention specific people or places for focused results</li>
       </ul>
 
-      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Using Corpus Filters</h4>
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Leveraging Hybrid Search</h4>
       <ul>
-        <li><strong>Start Broad:</strong> Begin with unfiltered searches to get a comprehensive view across all sources</li>
-        <li><strong>Filter Strategically:</strong> Use corpus filters to focus on specific parliamentary records when needed</li>
-        <li><strong>Understand Results:</strong> Remember that filtered searches may return fewer documents while maintaining high relevance</li>
+        <li><strong>Conceptual Queries:</strong> Ask about broad concepts - the dense vector search will find semantically related discussions</li>
+        <li><strong>Specific Names/Terms:</strong> The BM25 component ensures exact matches for person names, place names, and technical terms</li>
+        <li><strong>Multiple Approaches:</strong> Try both broad conceptual queries and specific terminology-focused searches</li>
+        <li><strong>Temporal Context:</strong> Include years or decades to focus on specific historical periods</li>
       </ul>
 
       <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Interpreting Results</h4>
       <ul>
-        <li><strong>Check Citations:</strong> Review the provided citations to verify the source and context of information</li>
-        <li><strong>Consider Time Period:</strong> Note the dates of retrieved documents to understand historical context</li>
-        <li><strong>Look for Patterns:</strong> Identify common themes or recurring issues across multiple documents</li>
+        <li><strong>Check Document Dates:</strong> Note chronology to understand historical development over time</li>
+        <li><strong>Verify Metadata:</strong> Review structured information about people, places, and concepts</li>
+        <li><strong>Use Canonical URLs:</strong> Citations include authoritative links for scholarly verification</li>
+        <li><strong>Cross-Reference Topics:</strong> Look for patterns across multiple documents and sources</li>
+      </ul>
+
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Example Effective Query Patterns</h4>
+      <ul>
+        <li><strong>"[Concept] in correspondence with [Person]"</strong> - Combines topic with specific individuals</li>
+        <li><strong>"[Subject area] work [decade]"</strong> - Historical context with temporal focus</li>
+        <li><strong>"[Specific process/event] experiments"</strong> - Targeted research activities</li>
+        <li><strong>"Personal letters about [topic]"</strong> - Informal discussions of subjects</li>
       </ul>
 
       <p>
-        Remember that ATLAS is designed to provide historically grounded responses. The system prioritizes accuracy and relevance over quantity of results, ensuring that you get the most meaningful information for your research.
+        The hybrid search architecture means you'll get both conceptually related content (even with different terminology) and exact matches for names and specific terms, providing comprehensive coverage of the historical sources.
       </p>
     `
   },
@@ -366,17 +414,39 @@ const faqs = [
     question: "How do citations work in ATLAS?",
     answer: `
       <p>
-        Citations in ATLAS provide transparency about the sources used to generate answers:
+        ATLAS provides rich, scholarly citations that link directly to authoritative sources:
       </p>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Scholarly Citation Format</h4>
       <ul>
-        <li><strong>Source Retrieval:</strong> When you ask a question, ATLAS retrieves the most relevant documents from the vector store based on semantic similarity</li>
-        <li><strong>Context Integration:</strong> These documents are sent as context to the large language model along with your question</li>
-        <li><strong>Automatic Citation:</strong> The system displays citations for the sources that informed the answer</li>
-        <li><strong>Citation Preview:</strong> You can hover over citation numbers to see a preview of the source content</li>
-        <li><strong>Full Content Access:</strong> Clicking a citation opens a modal with the complete source text and metadata</li>
+        <li><strong>Source Integration:</strong> Citations include proper formatting with authoritative project identifiers</li>
+        <li><strong>Canonical URLs:</strong> Each citation links to the official source collection page</li>
+        <li><strong>Complete Metadata:</strong> Dates, participants, archival locations, and document IDs for scholarly verification</li>
+        <li><strong>Structured Enhancement:</strong> Person names, places, organizations, and subject terms are properly formatted</li>
       </ul>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Interactive Citation Features</h4>
+      <ul>
+        <li><strong>Hover Previews:</strong> Mouse over citation numbers to see document content and metadata</li>
+        <li><strong>Full Text Modal:</strong> Click citations to open complete document text with archival details</li>
+        <li><strong>Truncation Notices:</strong> Longer documents show truncation indicators with full content available</li>
+        <li><strong>Direct Links:</strong> Every citation includes a link to the authoritative source page</li>
+      </ul>
+      
+      <h4 style="color: black; font-size: 1.25rem; font-weight: 600; margin-top: 2rem; margin-bottom: 1.2rem;">Research-Quality Citations</h4>
+      <ul>
+        <li><strong>Archival Standards:</strong> Include repository information and institutional affiliations</li>
+        <li><strong>Chronological Context:</strong> Clear dating to understand historical development</li>
+        <li><strong>Participant Information:</strong> Full names and relationships relevant to the documents</li>
+        <li><strong>Publication Details:</strong> Volume and page numbers where applicable</li>
+      </ul>
+      
       <p>
-        By default, ATLAS shows up to 10 citations per answer, prioritizing the most relevant sources. The exact number is configurable through the target configuration.
+        Citations follow established scholarly formats appropriate to the source collection, ensuring proper attribution and verification paths for research use.
+      </p>
+      
+      <p>
+        ATLAS shows a configurable number of citations per answer (typically 10-20), prioritizing the most relevant sources identified through hybrid search.
       </p>
     `
   },

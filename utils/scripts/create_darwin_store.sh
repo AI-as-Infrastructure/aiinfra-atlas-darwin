@@ -68,7 +68,21 @@ fi
 
 # Create Darwin vector store
 echo "🔨 Creating Darwin vector store..."
-python create/Darwin/xml/create_darwin_store.py
+
+# Set corpus mode (default to test for safety)
+CORPUS_MODE="${DARWIN_CORPUS_MODE:-test}"
+echo "📊 Corpus mode: $CORPUS_MODE"
+
+if [ "$CORPUS_MODE" = "full" ]; then
+    echo "🔥 Building FULL corpus (~15,000 letters, ~65 minutes)"
+    python create/Darwin/xml/create_darwin_store.py --corpus-mode=full
+elif [ "$CORPUS_MODE" = "test" ]; then
+    echo "🧪 Building TEST corpus (~16 letters, ~4 minutes)"  
+    python create/Darwin/xml/create_darwin_store.py --corpus-mode=test
+else
+    echo "❌ Error: Invalid DARWIN_CORPUS_MODE. Use 'full' or 'test'"
+    exit 1
+fi
 
 echo "✅ Darwin vector store created successfully!"
 echo "💡 Please commit the database directory and retriever file with Git LFS."

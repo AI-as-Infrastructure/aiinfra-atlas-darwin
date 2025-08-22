@@ -6,7 +6,7 @@ VENV_DIR := .venv
 PYTHON_VERSION := $(shell python3 --version 2>&1 | awk '{print $$2}')
 
 # Utility Targets
-.PHONY: l c pm vs r dvst torch-gpu gpul cpul
+.PHONY: l c pm vs vs-full vs-test r dvst torch-gpu gpul cpul
 
 # General utilities
 l: ## Generate requirements.lock file
@@ -25,8 +25,21 @@ pm: ## Prepare embedding model for ATLAS
 	@./utils/scripts/prepare_model.sh
 
 # Darwin vector store targets
-vs: ## Create Darwin vector store
-	@./utils/scripts/create_darwin_store.sh
+vs: vs-test ## Create Darwin vector store (defaults to test dataset for safety)
+
+vs-full: ## Create FULL Darwin corpus vector store (~15K letters, ~65min, production-ready)
+	@echo "🔥 Building FULL Darwin corpus vector store..."
+	@echo "📊 Processing: ~15,000 letters with hybrid search capabilities"
+	@echo "⏱️  Expected time: ~65 minutes (CPU), ~20 minutes (GPU)" 
+	@echo "💾 Output: Production-ready vector store with rich metadata"
+	@DARWIN_CORPUS_MODE=full ./utils/scripts/create_darwin_store.sh
+
+vs-test: ## Create TEST Darwin corpus vector store (~16 letters, ~4min, for development)
+	@echo "🧪 Building TEST Darwin corpus vector store..."
+	@echo "📊 Processing: ~16 letters for quick testing"
+	@echo "⏱️  Expected time: ~4 minutes"
+	@echo "🔬 Output: Development vector store for testing features"
+	@DARWIN_CORPUS_MODE=test ./utils/scripts/create_darwin_store.sh
 
 r: ## Generate Darwin retriever
 	@./utils/scripts/create_darwin_retriever.sh

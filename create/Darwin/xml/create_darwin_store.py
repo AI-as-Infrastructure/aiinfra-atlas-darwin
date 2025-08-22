@@ -890,7 +890,25 @@ def check_cuda_compatibility():
 
 def main():
     """Main function to create the Darwin corpus Chroma vector store."""
-    print("Starting Darwin corpus Chroma vector store creation...")
+    import argparse
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Create Darwin corpus Chroma vector store")
+    parser.add_argument("--corpus-mode", choices=["full", "test"], default="test",
+                       help="Corpus mode: 'full' (~15K letters) or 'test' (~16 letters)")
+    args = parser.parse_args()
+    
+    # Override XML directory based on corpus mode
+    global LETTERS_XML_DIR
+    if args.corpus_mode == "full":
+        LETTERS_XML_DIR = DEFAULT_FULL_XML
+        print("🔥 FULL corpus mode: Processing complete Darwin correspondence (~15,000 letters)")
+    else:
+        LETTERS_XML_DIR = DEFAULT_TEST_XML
+        print("🧪 TEST corpus mode: Processing test subset (~16 letters)")
+    
+    print(f"Starting Darwin corpus Chroma vector store creation...")
+    print(f"📁 Source directory: {LETTERS_XML_DIR}")
     
     # Prepare output directories
     os.makedirs(OUTPUT_DIR, exist_ok=True)
