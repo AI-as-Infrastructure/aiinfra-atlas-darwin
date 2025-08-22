@@ -134,9 +134,9 @@ echo "Pre-downloading embedding model to prevent rate limiting..."
 EMBEDDING_MODEL=$(grep "^EMBEDDING_MODEL=" "$APP_DIR/config/.env.production" | cut -d '=' -f2 | tr -d '"' || echo "Livingwithmachines/bert_1760_1900")
 echo "Downloading model: $EMBEDDING_MODEL"
 CUDA_VISIBLE_DEVICES="" python -c "
-from sentence_transformers import SentenceTransformer
 import os
-model_name = '$EMBEDDING_MODEL'
+from sentence_transformers import SentenceTransformer
+model_name = os.environ.get('MODEL_NAME', 'Livingwithmachines/bert_1760_1900')
 print(f'Pre-downloading embedding model: {model_name}')
 try:
     model = SentenceTransformer(model_name)
@@ -144,7 +144,7 @@ try:
 except Exception as e:
     print(f'⚠️  Model download failed: {e}')
     print('Workers will attempt to download during startup')
-"
+" MODEL_NAME="$EMBEDDING_MODEL"
 
 # Set up Python package structure
 echo "Setting up Python package structure..."
