@@ -136,9 +136,10 @@ echo "Downloading model: $EMBEDDING_MODEL"
 CUDA_VISIBLE_DEVICES="" python -c "
 from sentence_transformers import SentenceTransformer
 import os
-print('Pre-downloading embedding model: $EMBEDDING_MODEL')
+model_name = '$EMBEDDING_MODEL'
+print(f'Pre-downloading embedding model: {model_name}')
 try:
-    model = SentenceTransformer('$EMBEDDING_MODEL')
+    model = SentenceTransformer(model_name)
     print('✅ Embedding model downloaded and cached successfully')
 except Exception as e:
     print(f'⚠️  Model download failed: {e}')
