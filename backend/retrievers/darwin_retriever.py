@@ -77,22 +77,29 @@ class DarwinRetriever(BaseRetriever):
         self._maybe_initialize_bm25()
 
     def _initialize_vector_store(self):
-        # Try GPU first, fall back to CPU if CUDA fails
-        model_kwargs = {"device": "cuda"}
+        # Choose device based on availability; default to CPU on servers without NVIDIA drivers
+        device = "cpu"
+        try:
+            import torch  # type: ignore
+            if getattr(torch, "cuda", None) and torch.cuda.is_available():
+                device = "cuda"
+        except Exception:
+            device = "cpu"
+
+        model_kwargs = {"device": device}
         try:
             self.embeddings = HuggingFaceEmbeddings(
                 model_name=self.embedding_model,
                 model_kwargs=model_kwargs
             )
-        except RuntimeError as e:
-            if "CUDA" in str(e):
-                model_kwargs = {"device": "cpu"}
-                self.embeddings = HuggingFaceEmbeddings(
-                    model_name=self.embedding_model,
-                    model_kwargs=model_kwargs
-                )
-            else:
-                raise
+        except Exception as e:
+            # Fallback to CPU for any device-related initialization error
+            logger.warning(f"Embeddings init failed on device={device}: {e}. Falling back to CPU.")
+            model_kwargs = {"device": "cpu"}
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=self.embedding_model,
+                model_kwargs=model_kwargs
+            )
         
         self.vector_store = Chroma(
             collection_name=self.collection_name,
