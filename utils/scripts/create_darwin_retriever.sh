@@ -25,7 +25,11 @@ fi
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
     echo "📦 Creating virtual environment..."
-    python3 -m venv .venv
+    if ! command -v python3.10 >/dev/null 2>&1; then
+        echo "❌ Error: python3.10 not found. Please install Python 3.10 first."
+        exit 1
+    fi
+    python3.10 -m venv .venv
 fi
 
 # Activate virtual environment
@@ -39,26 +43,12 @@ if [ ! -f "config/requirements.lock" ]; then
     exit 1
 fi
 
-# Install dependencies
-echo "📥 Installing dependencies..."
+# Install dependencies (CPU-only)
+echo "📥 Installing dependencies (CPU-only)..."
 pip install --upgrade pip
-
-# If the lockfile contains CUDA-specific torch wheels (+cu), install non-torch deps first,
-# then install torch/vision/audio from the CUDA index without pinning the local '+cu' build.
-PYTORCH_INDEX_DEFAULT="https://download.pytorch.org/whl/cu124"
-PYTORCH_INDEX="${TORCH_CUDA_INDEX_URL:-$PYTORCH_INDEX_DEFAULT}"
-if grep -qE '^(torch|torchvision|torchaudio)==.*\+cu' config/requirements.lock; then
-    echo "🔧 Detected CUDA wheels in lockfile. Installing non-torch deps first..."
-    TMP_NO_TORCH=$(mktemp)
-    grep -v -E '^(torch|torchvision|torchaudio)==.*' config/requirements.lock > "$TMP_NO_TORCH"
-    pip install -r "$TMP_NO_TORCH"
-    rm -f "$TMP_NO_TORCH"
-
-    echo "🧩 Installing CUDA-enabled torch stack from: $PYTORCH_INDEX"
-    pip install --index-url "$PYTORCH_INDEX" torch torchvision torchaudio
-else
-    pip install -r config/requirements.lock
-fi
+export PIP_INDEX_URL="https://pypi.org/simple"
+unset PIP_EXTRA_INDEX_URL || true
+pip install -r config/requirements.lock
 
 # Check if Darwin retriever script exists
 if [ ! -f "create/Darwin/xml/create_darwin_retriever.py" ]; then

@@ -101,7 +101,11 @@ echo "Environment file updated"
 python3.10 -m venv .venv
 . .venv/bin/activate
 pip install --upgrade pip
-pip install -r config/requirements.txt gunicorn
+if [ ! -f "config/requirements.lock" ]; then
+  echo "❌ Error: config/requirements.lock not found. Run 'make l' to generate it before upgrading."
+  exit 1
+fi
+pip install -r config/requirements.lock gunicorn
 
 # Prepare embedding model if using default model
 EMBEDDING_MODEL=$(grep '^EMBEDDING_MODEL=' "config/.env.staging" | cut -d '=' -f 2- | tr -d '"')

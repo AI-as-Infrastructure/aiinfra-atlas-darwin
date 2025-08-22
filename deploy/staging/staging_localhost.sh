@@ -187,6 +187,15 @@ echo "Copying environment file..."
 sudo mkdir -p "$(dirname "$APP_DIR/config/.env.staging")"
 sudo cp -r "$PROJECT_ROOT/config/.env.staging" "$APP_DIR/config/.env.staging"
 
+# Also copy local requirements.lock to ensure consistent pins (Python 3.10)
+if [ -f "$PROJECT_ROOT/config/requirements.lock" ]; then
+    echo "Copying local requirements.lock..."
+    sudo cp -r "$PROJECT_ROOT/config/requirements.lock" "$APP_DIR/config/requirements.lock"
+else
+    echo "❌ Error: $PROJECT_ROOT/config/requirements.lock not found. Run 'make l' first."
+    exit 1
+fi
+
 # Check if environment file has correct settings for localhost deployment
 if ! grep -q "VITE_API_URL=https://localhost" "$APP_DIR/config/.env.staging"; then
     echo "⚠️ WARNING: Your .env.staging file doesn't have VITE_API_URL set to https://localhost"
@@ -205,7 +214,11 @@ cd $APP_DIR
 python$PYTHON_VERSION -m venv .venv
 . .venv/bin/activate
 pip install --upgrade pip
-pip install -r config/requirements.txt gunicorn
+if [ ! -f "config/requirements.lock" ]; then
+    echo "❌ Error: config/requirements.lock not found. Run 'make l' first to generate it."
+    exit 1
+fi
+pip install -r config/requirements.lock gunicorn
 
 # Ensure Python can find the application modules - improved version
 echo "Setting up Python path..."

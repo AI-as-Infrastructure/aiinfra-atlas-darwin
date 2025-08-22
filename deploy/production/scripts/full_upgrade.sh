@@ -45,14 +45,12 @@ git lfs pull
 echo "🐍 Rebuilding Python environment..."
 source .venv/bin/activate
 pip install --upgrade pip
-# Use requirements.lock if available, fallback to requirements.txt
-if [ -f "config/requirements.lock" ]; then
-    echo "Installing from requirements.lock (locked dependencies)..."
-    pip install -r config/requirements.lock
-else
-    echo "Installing from requirements.txt (fallback)..."
-    pip install -r config/requirements.txt
+if [ ! -f "config/requirements.lock" ]; then
+    echo "❌ Error: config/requirements.lock not found. Run 'make l' and commit/sync it before upgrading."
+    exit 1
 fi
+echo "Installing from requirements.lock (locked dependencies)..."
+pip install -r config/requirements.lock
 
 # 6. Set up Python package structure (in case it's missing)
 echo "📦 Setting up Python package structure..."
