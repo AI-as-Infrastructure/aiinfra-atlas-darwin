@@ -56,7 +56,9 @@ class UserFeedback(BaseModel):
     
     # New extended feedback fields
     analysis_quality: Optional[int] = None  # 1-5 Likert scale
+    corpus_fidelity: Optional[int] = None  # 1-5 Likert scale
     difficulty: Optional[int] = None  # 1-5 Likert scale
+    user_expertise: Optional[str] = None  # 'expert' or 'non-expert'
     
     # New faults structure (alternative to tags)
     faults: Optional[Dict[str, bool]] = None  # {hallucination, off_topic, inappropriate, bias}
@@ -102,6 +104,17 @@ def get_clarity_description(score: int) -> str:
         5: "5/5: Perfectly clear - Answer is exceptionally well-explained"
     }
     return descriptions.get(score, f"Clarity score: {score}/5")
+
+def get_corpus_fidelity_description(score: int) -> str:
+    """Return a description for a corpus fidelity score"""
+    descriptions = {
+        1: "1/5: Very low fidelity - Answer contradicts or ignores source materials",
+        2: "2/5: Low fidelity - Limited adherence to source materials",
+        3: "3/5: Moderate fidelity - Generally consistent with sources",
+        4: "4/5: High fidelity - Well-grounded in source materials",
+        5: "5/5: Very high fidelity - Excellently represents source materials"
+    }
+    return descriptions.get(score, f"Corpus fidelity score: {score}/5")
 
 def get_source_quality_description(score: int) -> str:
     """Return a description for a source quality score"""
@@ -335,6 +348,38 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
                 "label": "clarity",
                 "score": clarity_score,
                 "explanation": get_clarity_description(clarity_score)  # Add detailed explanation for Phoenix UI
+            },
+            "metadata": {"qa_id": qa_id} if qa_id else {}
+        })
+
+    # Add corpus fidelity rating annotation if present
+    if "corpus_fidelity" in feedback_data and feedback_data["corpus_fidelity"] is not None:
+        corpus_fidelity_score = feedback_data["corpus_fidelity"]
+        annotation_data.append({
+            "id": f"{annotation_id}_corpus_fidelity",
+            "name": "Corpus Fidelity",  # Required field by Phoenix API
+            "span_id": formatted_span_id,
+            "annotator_kind": "HUMAN",  # Required field by Phoenix API
+            "result": {  # Nest these fields inside result as expected by Phoenix
+                "label": "corpus_fidelity",
+                "score": corpus_fidelity_score,
+                "explanation": get_corpus_fidelity_description(corpus_fidelity_score)
+            },
+            "metadata": {"qa_id": qa_id} if qa_id else {}
+        })
+
+    # Add user expertise annotation if present
+    if "user_expertise" in feedback_data and feedback_data["user_expertise"]:
+        expertise_level = feedback_data["user_expertise"]
+        annotation_data.append({
+            "id": f"{annotation_id}_user_expertise",
+            "name": "User Expertise",  # Required field by Phoenix API
+            "span_id": formatted_span_id,
+            "annotator_kind": "HUMAN",  # Required field by Phoenix API
+            "result": {  # Nest these fields inside result as expected by Phoenix
+                "label": "user_expertise",
+                "value": expertise_level,
+                "explanation": f"User identified as: {expertise_level}"
             },
             "metadata": {"qa_id": qa_id} if qa_id else {}
         })
