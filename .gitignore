@@ -109,3 +109,5 @@ load_tests/results/
 load_tests/*.log
 
 
+create/Darwin/xml/output/darwin.txt
+create/Darwin/xml/output/letter_verification.json
