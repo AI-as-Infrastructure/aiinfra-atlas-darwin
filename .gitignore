@@ -24,9 +24,6 @@ create/output/*
 models/**
 models/bert_1890_1900_st/
 load_tests/reports/*
-create/Darwin/xml/output/darwin.txt
-create/Darwin/xml/output/letter_verification.json
-
 # Chroma database directories - only ignore build artifacts in create/
 create/**/chroma_db/
 # Darwin XML output directory should be ignored
@@ -110,6 +107,3 @@ load_tests/reports/
 load_tests/results/
 load_tests/*.log
 
-
-create/Darwin/xml/output/darwin.txt
-create/Darwin/xml/output/letter_verification.json
