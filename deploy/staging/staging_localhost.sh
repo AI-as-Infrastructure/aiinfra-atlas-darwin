@@ -242,6 +242,7 @@ LOGS_ABS_PATH="$PROJECT_ROOT/deploy/staging/logs"
 mkdir -p "$LOGS_ABS_PATH"
 
 # Make sure the Gunicorn service uses the correct Python version
+# Force CPU-only usage in staging to mirror production environment (no GPU on prod servers)
 cat > /tmp/gunicorn.service << EOL
 [Unit]
 Description=Gunicorn instance for $APP_NAME
@@ -254,6 +255,7 @@ WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/.venv/bin"
 Environment="PYTHONPATH=$APP_DIR"
 Environment="ENVIRONMENT=staging"
+Environment="CUDA_VISIBLE_DEVICES="
 
 # Environment settings come from .env.staging
 EnvironmentFile=$APP_DIR/config/.env.staging
@@ -279,6 +281,7 @@ Group=$CURRENT_USER
 WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/.venv/bin"
 Environment="PYTHONPATH=$APP_DIR"
+Environment="CUDA_VISIBLE_DEVICES="
 # Pass Phoenix telemetry environment variables to the worker
 Environment="PHOENIX_CLIENT_HEADERS=$(grep PHOENIX_CLIENT_HEADERS $APP_DIR/config/.env.staging | cut -d'=' -f2-)"
 Environment="PHOENIX_PROJECT_NAME=$(grep PHOENIX_PROJECT_NAME $APP_DIR/config/.env.staging | cut -d'=' -f2-)"
