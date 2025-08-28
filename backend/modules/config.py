@@ -77,7 +77,6 @@ def _get_default_config() -> Dict[str, Any]:
     
     return {
         "ATLAS_VERSION": "1.0.0",
-        "system_prompt": ROLE_DEFINITION[:101] + ("..." if len(ROLE_DEFINITION) > 101 else ""),
         "retriever_config": {
             "embedding_model": embedding_model,
             "search_type": os.getenv("SEARCH_TYPE", "hybrid"),
@@ -376,9 +375,8 @@ def get_llm_config() -> LLMConfig:
     })
 
 def get_system_prompt() -> str:
-    """Get the system prompt."""
-    config = get_config()
-    return config.get("system_prompt", "")
+    """Get the system prompt from system_prompts.py - no fallback."""
+    return system_prompt
 
 def get_corpus_options() -> List[CorpusOption]:
     """Get available corpus options."""
