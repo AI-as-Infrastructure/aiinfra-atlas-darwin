@@ -147,6 +147,41 @@ class DarwinRetriever(BaseRetriever):
     def _unique_id_from_meta(self, meta: Dict[str, Any]) -> str:
         return f"{meta.get('letter_id','unknown')}#{meta.get('chunk_index',0)}"
 
+    def _matches_filter(self, meta: Dict[str, Any], filter_dict: Dict[str, Any]) -> bool:
+        """Check if document metadata matches filter criteria."""
+        if not filter_dict:
+            return True
+            
+        # Handle sender/recipient filters
+        if "sender_name" in filter_dict and meta.get("sender_name") != filter_dict["sender_name"]:
+            return False
+        if "recipient_name" in filter_dict and meta.get("recipient_name") != filter_dict["recipient_name"]:
+            return False
+            
+        # Handle year filters
+        if "year" in filter_dict:
+            year_filter = filter_dict["year"]
+            doc_year = meta.get("year")
+            if doc_year is None:
+                return False
+            if isinstance(year_filter, dict):
+                if "$lt" in year_filter and doc_year >= year_filter["$lt"]:
+                    return False
+                if "$gte" in year_filter and doc_year < year_filter["$gte"]:
+                    return False
+                if "$lte" in year_filter and doc_year > year_filter["$lte"]:
+                    return False
+            elif isinstance(year_filter, int) and doc_year != year_filter:
+                return False
+                
+        # Handle $and conditions
+        if "$and" in filter_dict:
+            for condition in filter_dict["$and"]:
+                if not self._matches_filter(meta, condition):
+                    return False
+                    
+        return True
+
     def _build_filter_dict(
         self, direction_filter: Optional[str] = None, time_period_filter: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
@@ -224,16 +259,27 @@ class DarwinRetriever(BaseRetriever):
             for i, d in enumerate(docs)
         ]
 
-    def _bm25_search_ids(self, query: str, k: int) -> List[Tuple[str, float]]:
+    def _bm25_search_ids(self, query: str, k: int, filter_dict: Optional[Dict[str, Any]] = None) -> List[Tuple[str, float]]:
         if not self._bm25_ready:
             return []
         tokens = [t.lower() for t in TOKEN_RE.findall(query)]
         scores = self._bm25.get_scores(tokens)
-        ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:k]
+        ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
         out: List[Tuple[str, float]] = []
-        for rank_pos, (idx, _score) in enumerate(ranked):
+        rank_pos = 0
+        for idx, _score in ranked:
+            if len(out) >= k:
+                break
             doc_id = self._bm25_docs[idx]["id"]
+            # Apply filter if provided
+            if filter_dict:
+                rec = self._bm25_docs[idx]
+                meta = rec.get("metadata", {})
+                # Check if document matches filter criteria
+                if not self._matches_filter(meta, filter_dict):
+                    continue
             out.append((doc_id, float(rank_pos)))
+            rank_pos += 1
         return out
 
     def _materialize_docs_by_ids(
@@ -401,7 +447,7 @@ class DarwinRetriever(BaseRetriever):
                 
                 # Time BM25 search
                 bm25_start = time.time()
-                bm25_ranked = self._bm25_search_ids(query, per_side)
+                bm25_ranked = self._bm25_search_ids(query, per_side, filter_dict)
                 bm25_time = time.time() - bm25_start
                 
                 # Add search component metrics
@@ -495,7 +541,7 @@ class DarwinRetriever(BaseRetriever):
                 
                 # Time BM25 search
                 bm25_start = time.time()
-                bm25_ranked = self._bm25_search_ids(input, per_side)
+                bm25_ranked = self._bm25_search_ids(input, per_side, filter_dict)
                 bm25_time = time.time() - bm25_start
                 
                 # Add search component metrics
