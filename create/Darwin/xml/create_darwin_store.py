@@ -164,7 +164,7 @@ def get_vector_store_config():
         'TEXT_SPLITTER_TYPE': text_splitter_type
     }
     
-    print(f"Vector store config from .env: chunk_size={chunk_size}, overlap={chunk_overlap}, splitter={text_splitter_type}")
+    print(f"Vector store config from .env: collection={collection_name}, chunk_size={chunk_size}, overlap={chunk_overlap}, splitter={text_splitter_type}")
     return config
 
 # Get configuration from .env

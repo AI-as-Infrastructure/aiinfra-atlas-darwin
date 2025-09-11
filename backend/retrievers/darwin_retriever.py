@@ -37,9 +37,8 @@ DIRECTION_OPTIONS = [
 
 TIME_PERIOD_OPTIONS = [
     {"value": "all", "label": "All Years"},
-    {"value": "1821-1840", "label": "1821-1840"},
-    {"value": "1831-1850", "label": "1831-1850"},
-    {"value": "1850-1870", "label": "1850-1870"},
+    {"value": "before-1860", "label": "Before 1860"},
+    {"value": "1860-1870", "label": "1860-1870"},
     {"value": "1870-1882", "label": "1870-1882"},
 ]
 
@@ -56,15 +55,15 @@ class DarwinRetriever(BaseRetriever):
 
         # Core config
         self.collection_name = "darwin"
-        self.chunk_size = "1500"
-        self.chunk_overlap = "250"
+        self.chunk_size = "1200"
+        self.chunk_overlap = "200"
         self.embedding_model = "Livingwithmachines/bert_1760_1900"
         self._supports_direction_filtering = True
         self._supports_time_period_filtering = True
 
-        # Vector store
+        # Vector store - Use backend/targets for deployment, not create directory
         self.persist_directory = os.getenv(
-            "CHROMA_PERSIST_DIRECTORY", "./create/Darwin/xml/output/chroma_db"
+            "CHROMA_PERSIST_DIRECTORY", "backend/targets/chroma_db"
         )
         self._initialize_vector_store()
 
@@ -114,7 +113,8 @@ class DarwinRetriever(BaseRetriever):
         if self._bm25_ready or BM25Okapi is None:
             return
         try:
-            default_path = Path("create/Darwin/xml/output/bm25_corpus.jsonl")
+            # Use backend/targets for deployment, not create directory
+            default_path = Path("backend/targets/bm25_corpus.jsonl")
             corpus_path = Path(os.getenv("DARWIN_BM25_CORPUS", str(default_path)))
             if not corpus_path.exists():
                 logger.warning(
@@ -158,7 +158,9 @@ class DarwinRetriever(BaseRetriever):
                 filter_conditions.append({"recipient_name": "Darwin, C. R."})
 
         if time_period_filter and time_period_filter != "all":
-            if "-" in time_period_filter:
+            if time_period_filter == "before-1860":
+                filter_conditions.append({"year": {"$lt": 1860}})
+            elif "-" in time_period_filter:
                 try:
                     start_year, end_year = map(int, time_period_filter.split("-"))
                     filter_conditions.append(
@@ -265,6 +267,16 @@ class DarwinRetriever(BaseRetriever):
                                 ok = False
                                 break
                     if not ok:
+                        continue
+                elif "year" in filter_dict and isinstance(filter_dict["year"], dict):
+                    y = meta.get("year")
+                    if y is None:
+                        continue
+                    if "$lt" in filter_dict["year"] and y >= filter_dict["year"]["$lt"]:
+                        continue
+                    if "$gte" in filter_dict["year"] and y < filter_dict["year"]["$gte"]:
+                        continue
+                    if "$lte" in filter_dict["year"] and y > filter_dict["year"]["$lte"]:
                         continue
                 elif "year" in filter_dict and isinstance(filter_dict["year"], int):
                     if meta.get("year") != filter_dict["year"]:
@@ -377,7 +389,7 @@ class DarwinRetriever(BaseRetriever):
             
             if search_type == "hybrid" and self._bm25_ready:
                 span.set_attribute("hybrid_search.enabled", True)
-                per_side = max(k * 10, 100)
+                per_side = int(os.getenv("LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS", "100"))
                 span.set_attribute("hybrid_search.per_side_candidates", per_side)
                 
                 # Time dense search
@@ -469,7 +481,7 @@ class DarwinRetriever(BaseRetriever):
             
             if search_type == "hybrid" and self._bm25_ready:
                 span.set_attribute("hybrid_search.enabled", True)
-                per_side = max(k * 10, 100)
+                per_side = int(os.getenv("LARGE_RETRIEVAL_SIZE_SINGLE_CORPUS", "100"))
                 span.set_attribute("hybrid_search.per_side_candidates", per_side)
                 
                 # Time dense search

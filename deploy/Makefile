@@ -18,8 +18,8 @@ f: ## Start frontend development server
 d: ## Destroy development environment
 	@./deploy/dev/scripts/clean_dev.sh
 
-# Production Deployment Targets
-.PHONY: p dp up sp
+# Production Deployment Targets  
+.PHONY: p dp sp
 p: ## Deploy to production (run locally on server)
 	@if [ ! -f "config/.env.production" ]; then \
 		echo "ERROR: config/.env.production file not found!"; \
@@ -28,27 +28,8 @@ p: ## Deploy to production (run locally on server)
 	fi
 	@bash deploy/production/production.sh
 
-dp: ## Delete production environment
+dp: ## Delete production environment (preserves SSL certificates)
 	@./deploy/production/scripts/clean_prod.sh
-
-up: ## Upgrade production with minimal downtime (run on server)
-	@echo "🚀 Production upgrade using simple server-side approach"
-	@if [ ! -f "config/.env.production" ]; then \
-		echo "ERROR: config/.env.production file not found!"; \
-		echo "Please ensure you're running this on the production server."; \
-		exit 1; \
-	fi
-	@bash deploy/production/scripts/simple_upgrade.sh
-
-upf: ## Full upgrade production with complete rebuild (run on server)
-	@echo "🚀 FULL Production upgrade - complete rebuild"
-	@echo "⚠️  Use this when you've changed .env.production or need complete rebuild"
-	@if [ ! -f "config/.env.production" ]; then \
-		echo "ERROR: config/.env.production file not found!"; \
-		echo "Please ensure you're running this on the production server."; \
-		exit 1; \
-	fi
-	@bash deploy/production/scripts/full_upgrade.sh
 
 sp: ## Stop production environment gracefully
 	@echo "🚨 WARNING: This will stop the production environment!"
@@ -68,7 +49,7 @@ ds: ## Delete local staging environment
 
 # Load Testing Targets
 .PHONY: lts
-lts: ## Run realistic load test against staging environment (15 concurrent users, 30 min)
+lts: ## Run realistic load test against staging environment (15 concurrent users, 30 min) with warmup/warmdown
 	@echo "🧪 Running realistic load test against staging environment..."
 	@echo "📊 Optimized for 8 vCPU, 16GB RAM servers with 15-20 concurrent users"
 	@if [ ! -f "config/.env.staging" ]; then \
@@ -102,7 +83,6 @@ help: ## Show this help message
 	@echo "🚀 DEPLOYMENT:"
 	@echo "  make s       - Deploy to local staging"
 	@echo "  make p       - Deploy to production"
-	@echo "  make up      - Upgrade production"
 	@echo ""
 	@echo "💡 OPTIMIZATION FEATURES:"
 	@echo "  ✅ 100+ diverse questions with cache-busting"
