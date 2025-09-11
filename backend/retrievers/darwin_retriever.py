@@ -354,7 +354,9 @@ class DarwinRetriever(BaseRetriever):
     async def _get_relevant_documents(
         self, query: str, config: Optional[Dict] = None, **kwargs
     ) -> List[Document]:
-        k = kwargs.get("k", 10)
+        # Get configured search_k from target configuration instead of hardcoded default
+        from backend.modules.config import get_search_k
+        k = kwargs.get("k", get_search_k())
         direction_filter = None
         time_period_filter = None
         session_id = kwargs.get("session_id") or (config or {}).get("session_id")
@@ -446,7 +448,9 @@ class DarwinRetriever(BaseRetriever):
 
     def invoke(self, input: str, config: Optional[Dict] = None, **kwargs) -> List[Document]:
         # Synchronous implementation with same logic as async version
-        k = kwargs.get("k", 10)
+        # Get configured search_k from target configuration instead of hardcoded default
+        from backend.modules.config import get_search_k
+        k = kwargs.get("k", get_search_k())
         direction_filter = None
         time_period_filter = None
         session_id = kwargs.get("session_id") or (config or {}).get("session_id")
