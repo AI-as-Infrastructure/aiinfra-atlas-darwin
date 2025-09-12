@@ -670,6 +670,7 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
             json=payload,
             timeout=30.0  # Use a longer timeout
         )
+        
         if response.status_code == 200:
             logger.info(f"Successfully submitted annotation for span {span_id}")
             return True
@@ -677,10 +678,8 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
             # Redact secrets and avoid logging full payload
             try:
                 redacted_headers = {k: ('***' if k.lower() == 'api_key' else v) for k, v in headers.items()}
-                body_snippet = response.text[:1000] if hasattr(response, 'text') else '<no body>'
-                logger.error(f"Failed to submit annotation: {response.status_code} at {annotation_endpoint}")
+                logger.error(f"Failed to submit annotation: {response.status_code}")
                 logger.error(f"Headers used (redacted): {redacted_headers}")
-                logger.error(f"Response body (truncated): {body_snippet}")
             except (NameError, UnboundLocalError):
                 logger.error(f"Failed to submit annotation: {response.status_code}")
                 logger.error("Headers not available for logging")
