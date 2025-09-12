@@ -118,13 +118,31 @@ class TargetConfig:
             logger.info(f"[TargetConfig] Found Chroma config file: {config_file}")
             try:
                 with open(config_file, 'r') as f:
-                    for line in f:
+                    content = f.read()
+                    
+                    # Parse manifest format (e.g., "Chunk Size: 1500")
+                    manifest_mappings = {
+                        "Chunk Size": "CHUNK_SIZE",
+                        "Chunk Overlap": "CHUNK_OVERLAP",
+                        "Model": "EMBEDDING_MODEL",
+                        "Text Splitter": "TEXT_SPLITTER_TYPE",
+                        "Collection": "CHROMA_COLLECTION_NAME"
+                    }
+                    
+                    # Parse manifest format
+                    for line in content.split('\n'):
                         line = line.strip()
-                        if line and not line.startswith('#') and '=' in line:
-                            key, value = [x.strip() for x in line.split('=', 1)]
-                            if key in config_values:
-                                config_values[key] = value.strip('"').strip("'")
-                                logger.info(f"[TargetConfig] Loaded Chroma config: {key}={config_values[key]}")
+                        if ':' in line and not line.startswith('#'):
+                            for manifest_key, config_key in manifest_mappings.items():
+                                if line.startswith(manifest_key + ":"):
+                                    value = line.split(':', 1)[1].strip()
+                                    # Remove any trailing commas and clean the value
+                                    value = value.rstrip(',').strip()
+                                    if config_key in config_values:
+                                        config_values[config_key] = value
+                                        logger.info(f"[TargetConfig] Loaded from manifest: {config_key}={value}")
+                                    break
+                                
             except Exception as e:
                 logger.error(f"[TargetConfig] Error reading Chroma config {config_file}: {e}")
         else:

@@ -88,8 +88,6 @@ def _get_default_config() -> Dict[str, Any]:
             "supports_corpus_filtering": False,  # Will be set dynamically by retriever
             "corpus_options": [],  # Will be populated dynamically by retriever
             "algorithm": "hnsw",
-            "chunk_size": 1000,
-            "chunk_overlap": 200,
             "pooling": os.getenv("POOLING", "mean"),
             "target_id": "default",
             "target_version": "1.0",
@@ -187,7 +185,50 @@ def _load_target_config(config: Dict[str, Any], target_id: str) -> None:
     
     try:
         with open(target_file, 'r') as f:
-            for line in f:
+            content = f.read()
+            
+            # Parse manifest format (e.g., "Chunk Size: 1500")
+            manifest_mappings = {
+                "Chunk Size": "CHUNK_SIZE",
+                "Chunk Overlap": "CHUNK_OVERLAP",
+                "Model": "EMBEDDING_MODEL",
+                "Text Splitter": "TEXT_SPLITTER_TYPE",
+                "Collection": "CHROMA_COLLECTION_NAME"
+            }
+            
+            # Parse manifest format first
+            for line in content.split('\n'):
+                line = line.strip()
+                if ':' in line and not line.startswith('#'):
+                    for manifest_key, config_key in manifest_mappings.items():
+                        if line.startswith(manifest_key + ":"):
+                            value = line.split(':', 1)[1].strip()
+                            # Remove any trailing commas and clean the value
+                            value = value.rstrip(',').strip()
+                            
+                            # Apply type conversion if needed
+                            if config_key in type_conversions:
+                                try:
+                                    value = type_conversions[config_key](value)
+                                except ValueError:
+                                    logger.warning(f"Could not convert {config_key}={value} to {type_conversions[config_key].__name__}")
+                                    continue
+                            
+                            # Update the config if this key is mapped
+                            if config_key in target_mappings:
+                                config_path = target_mappings[config_key]
+                                current = config
+                                for i, path_key in enumerate(config_path):
+                                    if i == len(config_path) - 1:
+                                        current[path_key] = value
+                                    else:
+                                        if path_key not in current:
+                                            current[path_key] = {}
+                                        current = current[path_key]
+                            break
+            
+            # Also support legacy key=value format
+            for line in content.split('\n'):
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
                     key, value = [x.strip() for x in line.split('=', 1)]
@@ -216,6 +257,72 @@ def _load_target_config(config: Dict[str, Any], target_id: str) -> None:
         logger.debug(f"Loaded target configuration from {target_file}")
     except Exception as e:
         logger.error(f"Error loading target configuration from {target_file}: {e}")
+
+def _load_vector_store_config(config: Dict[str, Any], collection_name: str) -> None:
+    """Load vector store configuration for chunk sizes."""
+    vector_store_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                   'targets', f"{collection_name}.txt")
+    
+    if not os.path.isfile(vector_store_file):
+        logger.warning(f"Vector store configuration file not found: {vector_store_file}")
+        return
+    
+    # Mappings for vector store manifest
+    vector_store_mappings = {
+        "CHUNK_SIZE": ["retriever_config", "chunk_size"],
+        "CHUNK_OVERLAP": ["retriever_config", "chunk_overlap"],
+        "EMBEDDING_MODEL": ["retriever_config", "embedding_model"]
+    }
+    
+    # Type conversions
+    type_conversions = {
+        "CHUNK_SIZE": int,
+        "CHUNK_OVERLAP": int
+    }
+    
+    try:
+        with open(vector_store_file, 'r') as f:
+            content = f.read()
+            
+            # Parse manifest format (e.g., "Chunk Size: 1500")
+            manifest_mappings = {
+                "Chunk Size": "CHUNK_SIZE",
+                "Chunk Overlap": "CHUNK_OVERLAP", 
+                "Model": "EMBEDDING_MODEL"
+            }
+            
+            # Parse manifest format
+            for line in content.split('\n'):
+                line = line.strip()
+                if ':' in line and not line.startswith('#'):
+                    for manifest_key, config_key in manifest_mappings.items():
+                        if line.startswith(manifest_key + ":"):
+                            value = line.split(':', 1)[1].strip()
+                            value = value.rstrip(',').strip()
+                            
+                            # Apply type conversion if needed
+                            if config_key in type_conversions:
+                                try:
+                                    value = type_conversions[config_key](value)
+                                except ValueError:
+                                    logger.warning(f"Could not convert {config_key}={value} to {type_conversions[config_key].__name__}")
+                                    continue
+                            
+                            # Update the config if this key is mapped
+                            if config_key in vector_store_mappings:
+                                config_path = vector_store_mappings[config_key]
+                                current = config
+                                for i, path_key in enumerate(config_path):
+                                    if i == len(config_path) - 1:
+                                        current[path_key] = value
+                                    else:
+                                        if path_key not in current:
+                                            current[path_key] = {}
+                                        current = current[path_key]
+                            break
+                            
+    except Exception as e:
+        logger.error(f"Error loading vector store configuration from {vector_store_file}: {e}")
 
 def validate_config_schema(config: Dict[str, Any]) -> List[str]:
     """Validate configuration schema and return list of errors."""
@@ -303,6 +410,10 @@ def initialize_config() -> Dict[str, Any]:
     # Load target-specific configuration
     target_id = os.getenv("TEST_TARGET", "default")
     _load_target_config(_config, target_id)
+    
+    # Load vector store configuration for chunk sizes
+    chroma_collection = os.getenv("CHROMA_COLLECTION_NAME", "darwin")
+    _load_vector_store_config(_config, chroma_collection)
     
     # Store target ID in config for reference
     if "retriever_config" in _config and isinstance(_config["retriever_config"], dict):
