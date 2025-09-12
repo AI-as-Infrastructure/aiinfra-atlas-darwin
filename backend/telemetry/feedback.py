@@ -15,21 +15,35 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-async def find_qa_span_id_with_retry(session_id: str, qa_id: str, max_retries: int = 3) -> Optional[str]:
+async def find_qa_span_id_with_retry(session_id: str, qa_id: str, max_retries: int = 5) -> Optional[str]:
     """
-    Find span ID with retry logic for development SQLite timing issues.
-    In production (Redis), this will succeed on first attempt with minimal overhead.
+    Find span ID with enhanced retry logic for Phoenix batch processor timing.
+    
+    Accounts for:
+    - Batch processor 100ms delay
+    - Network latency to Phoenix/Arize  
+    - Potential service disruptions
+    - Both development (SQLite) and production (Redis) timing issues
     """
-    delays = [0.05, 0.1, 0.2]  # 50ms, 100ms, 200ms
+    # Enhanced delays: account for batch processor + network + backoff
+    delays = [0.15, 0.25, 0.5, 1.0, 2.0]  # 150ms, 250ms, 500ms, 1s, 2s
     
     for i in range(max_retries):
         span_id = find_qa_span_id(session_id, qa_id)
         if span_id:
+            if i > 0:  # Log if we had to retry
+                logger.info(f"Found span after {i+1} attempts: session={session_id}, qa_id={qa_id}, span_id={span_id}")
             return span_id
         
         if i < max_retries - 1:  # Don't sleep on last attempt
-            await asyncio.sleep(delays[min(i, len(delays)-1)])
+            current_delay = delays[min(i, len(delays)-1)]
+            if i == 0:
+                logger.debug(f"Span not found on first attempt, retrying in {current_delay*1000:.0f}ms: session={session_id}, qa_id={qa_id}")
+            else:
+                logger.warning(f"Span not found after {i+1} attempts, retrying in {current_delay*1000:.0f}ms: session={session_id}, qa_id={qa_id}")
+            await asyncio.sleep(current_delay)
     
+    logger.error(f"Failed to find span after {max_retries} attempts: session={session_id}, qa_id={qa_id}")
     return None
 
 class UserFeedback(BaseModel):
@@ -674,18 +688,37 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
         if response.status_code == 200:
             logger.info(f"Successfully submitted annotation for span {span_id}")
             return True
+        elif response.status_code in [429, 503, 504]:  # Rate limiting or service unavailable
+            logger.warning(f"Phoenix API temporarily unavailable (HTTP {response.status_code}): {response.text[:200]}")
+            return False
+        elif response.status_code == 401:
+            logger.error(f"Phoenix API authentication failed (HTTP 401) - check PHOENIX_CLIENT_HEADERS configuration")
+            return False
+        elif response.status_code == 400:
+            logger.error(f"Phoenix API bad request (HTTP 400): {response.text[:500]}")
+            logger.debug(f"Payload size: {len(payload_json)} characters, annotation count: {len(annotation_data)}")
+            return False
         else:
             # Redact secrets and avoid logging full payload
             try:
                 redacted_headers = {k: ('***' if k.lower() == 'api_key' else v) for k, v in headers.items()}
-                logger.error(f"Failed to submit annotation: {response.status_code}")
+                logger.error(f"Phoenix API failed with HTTP {response.status_code}: {response.text[:200]}")
                 logger.error(f"Headers used (redacted): {redacted_headers}")
+                logger.debug(f"Endpoint: {annotation_endpoint}")
             except (NameError, UnboundLocalError):
                 logger.error(f"Failed to submit annotation: {response.status_code}")
                 logger.error("Headers not available for logging")
             return False
+    except httpx.TimeoutException as e:
+        logger.warning(f"Phoenix API timeout after 30s - network or service issue: {e}")
+        logger.debug(f"Attempted endpoint: {annotation_endpoint}")
+        return False
+    except httpx.ConnectError as e:
+        logger.error(f"Failed to connect to Phoenix API: {e}")
+        logger.debug(f"Attempted endpoint: {annotation_endpoint}")
+        return False
     except Exception as e:
-        logger.error(f"Exception submitting annotation: {e}", exc_info=True)
+        logger.error(f"Unexpected exception submitting annotation: {e}", exc_info=True)
         logger.error(f"Attempted endpoint: {annotation_endpoint}")
         # Only log headers if they exist and are accessible
         try:
