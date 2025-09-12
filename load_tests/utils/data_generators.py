@@ -8,104 +8,61 @@ class DataGenerator:
     """Generate realistic test data for ATLAS load testing"""
     
     def __init__(self):
-        # Australian-specific questions optimized for 1901_au filter
-        self.australian_questions = [
-            "What was discussed about the Australian Federation Act in 1901?",
-            "How did Australian Parliament debate the Constitution Act in 1901?",
-            "What were the key arguments for and against federation in Australian colonies?",
-            "What debates occurred regarding the White Australia Policy in 1901?",
-            "How did Australian Parliament justify the Immigration Restriction Act of 1901?",
-            "What was discussed about Chinese immigration in Australian parliaments?",
-            "How did Australian colonial parliaments respond to calls for South African War volunteers?",
-            "How did Australian Parliament address imperial defense obligations?",
-            "How did Australian Parliament address tariff policy and trade protection in 1901?",
-            "What was the Australian government's response to labor disputes in 1901?",
-            "How did Australian Parliament debate the eight-hour working day?",
-            "What debates occurred about child labor restrictions in Australian Parliament?",
-            "What debates occurred regarding women's suffrage in Australian Parliament in 1901?",
-            "What parliamentary discussions addressed Aboriginal affairs in Australian Parliament in 1901?",
-            "How did Australian Parliament debate Aboriginal protection and assimilation policies?",
-            "How did Australian Parliament debate Australian national identity and culture?",
-            "How did Australian Parliament address public health concerns in 1901?",
-            "What debates covered education policy in the Australian colonies in 1901?",
-            "How did Australian Parliament debate the role of colonial governors?",
-            "How did Australian Parliament debate closer settlement policies?",
-            "What discussions occurred regarding military defense in Australian Parliament in 1901?",
-            "What was discussed about banking and currency in Australian Parliament in 1901?",
-            "How did Australian Parliament address the sugar industry protection?",
-            "What discussions occurred about mining industry regulation in Australian Parliament?",
-            "How did Australian Parliament debate railway construction and transport policy?"
+        # Darwin correspondence questions - focused on what would be discussed in letters
+        self.darwin_questions = [
+            "What did Darwin write about his doubts regarding species mutability?",
+            "How did Darwin discuss his theory with other scientists before publication?",
+            "What experiments did Darwin describe in his letters to colleagues?",
+            "How did Darwin respond to criticisms of his evolutionary theory?",
+            "What did Darwin write about the reception of On the Origin of Species?",
+            "How did Darwin discuss his work on orchid fertilization with correspondents?",
+            "What observations about plant movement did Darwin share in his letters?",
+            "How did Darwin explain his ideas about sexual selection to other scientists?",
+            "What did Darwin write about his correspondence with Alfred Russel Wallace?",
+            "How did Darwin discuss his health problems in letters to friends?",
+            "What experimental results did Darwin share with the scientific community?",
+            "How did Darwin respond to religious objections to his theory?",
+            "What did Darwin write about his work on climbing plants?",
+            "How did Darwin discuss the problem of the eye in evolutionary theory?",
+            "What questions did Darwin pose to his correspondents about animal behavior?",
+            "How did Darwin explain variation under domestication to other scientists?",
+            "What did Darwin write about his observations of earthworms?",
+            "How did Darwin discuss the geological evidence for evolution?",
+            "What challenges in his theory did Darwin acknowledge to correspondents?",
+            "How did Darwin describe his method of collecting evidence?",
+            "What did Darwin write about inheritance and variation?",
+            "How did Darwin discuss the origin of moral sentiments?",
+            "What experimental requests did Darwin make to his correspondents?",
+            "How did Darwin explain his ideas about coral reef formation?",
+            "What did Darwin write about plant hybridization experiments?",
+            "How did Darwin discuss biogeographical distribution with colleagues?",
+            "What observations about insect behavior did Darwin share?",
+            "How did Darwin respond to questions about human evolution?",
+            "What did Darwin write about his botanical investigations?",
+            "How did Darwin discuss the struggle for existence with other naturalists?"
         ]
         
-        # New Zealand-specific questions optimized for 1901_nz filter
-        self.new_zealand_questions = [
-            "What parliamentary debates addressed the Treaty of Waitangi interpretation in New Zealand?",
-            "How did New Zealand Parliament discuss Māori land rights around 1900?",
-            "What was debated about Māori political representation in New Zealand Parliament?",
-            "How did New Zealand Parliament address Māori education and welfare issues?",
-            "What debates occurred about Māori customary law versus European law in New Zealand?",
-            "How did New Zealand Parliament discuss the Native Land Court system?",
-            "How did New Zealand Parliament discuss participation in the South African War?",
-            "How did New Zealand Parliament address Asian immigration restrictions?",
-            "What debates occurred regarding women's suffrage in New Zealand Parliament?",
-            "How did New Zealand Parliament debate land settlement policies?",
-            "What was discussed about labor conditions in New Zealand Parliament in 1901?",
-            "How did New Zealand Parliament address public works funding?",
-            "What debates occurred about education policy in New Zealand Parliament?",
-            "How did New Zealand Parliament discuss postal and telegraph services?",
-            "What was debated about local government in New Zealand Parliament?",
-            "How did New Zealand Parliament address public health measures?",
-            "What discussions occurred about temperance in New Zealand Parliament?",
-            "How did New Zealand Parliament debate railway development?",
-            "What was discussed about agricultural policy in New Zealand Parliament?",
-            "How did New Zealand Parliament address military defense in 1901?"
-        ]
-        
-        # UK Parliament questions optimized for 1901_uk filter
-        self.uk_questions = [
-            "How did UK Parliament debate dominion status for Australia in 1901?",
-            "What was the parliamentary response to Emily Hobhouse's reports on South African conditions?",
-            "How did UK Parliament debate Britain's conduct in the South African War?",
-            "What were the financial implications of the South African War discussed in UK Parliament?",
-            "What debates occurred about concentration camps during the South African War in UK Parliament?",
-            "How did UK Parliament debate the concept of Greater Britain?",
-            "What were the discussions about imperial preference in trade in UK Parliament?",
-            "What was debated about the Imperial Conference proposals in UK Parliament?",
-            "How did UK Parliament discuss imperial unity versus colonial autonomy?",
-            "What debates occurred about the role of the Governor-General in UK Parliament?",
-            "How did UK Parliament address imperial defense strategies?",
-            "What was discussed about colonial governance in UK Parliament?",
-            "How did UK Parliament debate imperial trade policies?",
-            "What discussions occurred about imperial citizenship in UK Parliament?",
-            "How did UK Parliament address colonial military contributions?",
-            "What was debated about imperial communications in UK Parliament?",
-            "How did UK Parliament discuss colonial constitutional development?",
-            "What debates occurred about imperial federation in UK Parliament?",
-            "How did UK Parliament address colonial administrative reform?",
-            "What was discussed about imperial economic relations in UK Parliament?"
-        ]
-        
-        # Cross-country questions that work well with "all" filter
+        # General questions about Darwin's thoughts and discussions in correspondence
         self.general_questions = [
-            "What was discussed about Imperial relations with Britain in 1901?",
-            "How did parliaments debate imperial preference for British goods?",
-            "What debates occurred about free trade versus protection across the Empire?",
-            "How did different parliaments discuss strikes and industrial disputes?",
-            "What was debated about old-age pensions across different parliaments?",
-            "How did parliaments address poverty and social welfare issues?",
-            "What discussions occurred about women's legal status and property rights?",
-            "How did different parliaments debate university funding and access?",
-            "What was discussed about telegraph and postal services across the Empire?",
-            "How did parliaments debate quarantine and disease prevention measures?"
+            "What did Darwin think about scientific method?",
+            "How did Darwin view the relationship between science and religion?",
+            "What were Darwin's thoughts on scientific collaboration?",
+            "How did Darwin approach experimental design?",
+            "What did Darwin believe about the nature of scientific evidence?",
+            "How did Darwin handle scientific disagreements?",
+            "What were Darwin's views on publishing controversial ideas?",
+            "How did Darwin discuss the importance of observation?",
+            "What did Darwin think about the role of hypothesis in science?",
+            "How did Darwin view the scientific community of his time?"
         ]
         
         # Intentionally sub-optimal questions for edge case testing (10% of questions)
         self.suboptimal_questions = [
-            "What debates occurred about child labor?",  # Generic, no country specified
-            "How did Parliament discuss women's suffrage?",  # Could apply to any country
-            "What was debated about banking policy?",  # Vague, no country context
-            "How did Parliament address education reform?",  # Generic question
-            "What discussions occurred about trade policy?",  # No specific country mentioned
+            "What is evolution?",  # Too generic
+            "Who was Darwin?",  # Overly simple
+            "What is natural selection?",  # Basic concept without context
+            "How did species change?",  # Vague question
+            "What is science?",  # Too broad, not Darwin-specific
         ]
         
         self.feedback_comments = [
@@ -122,33 +79,24 @@ class DataGenerator:
         ]
         
         self.corpus_filters = [
-            {"corpus": "hansard", "date_range": {"start": "1900", "end": "1950"}},
-            {"corpus": "hansard", "date_range": {"start": "1950", "end": "1980"}},
-            {"corpus": "hansard", "date_range": {"start": "1980", "end": "2010"}},
-            {"corpus": "hansard"},
+            {"corpus": "darwin"},
             {"corpus": "all"}
         ]
     
     def generate_question_and_filter(self) -> tuple[str, str]:
-        """Generate a question with its optimal filter for better HNSW search results"""
+        """Generate a question with its optimal filter for Darwin dataset testing"""
         # 10% chance for sub-optimal questions (for edge case testing)
         if random.random() < 0.1:
             question = random.choice(self.suboptimal_questions)
             # Random filter for sub-optimal questions to test mismatches
-            filter_choice = random.choice(["1901_au", "1901_nz", "1901_uk", "all"])
+            filter_choice = random.choice(["darwin", "all"])
             return question, filter_choice
         
         # 90% optimal question-filter matching
         choice = random.random()
-        if choice < 0.3:  # 30% Australian questions
-            question = random.choice(self.australian_questions)
-            return question, "1901_au"
-        elif choice < 0.6:  # 30% New Zealand questions
-            question = random.choice(self.new_zealand_questions)
-            return question, "1901_nz"
-        elif choice < 0.8:  # 20% UK questions
-            question = random.choice(self.uk_questions)
-            return question, "1901_uk"
+        if choice < 0.8:  # 80% Darwin-specific questions
+            question = random.choice(self.darwin_questions)
+            return question, "darwin"
         else:  # 20% general questions with "all" filter
             question = random.choice(self.general_questions)
             return question, "all"
@@ -184,7 +132,7 @@ class DataGenerator:
     
     def generate_corpus_filter(self) -> str:
         """Generate corpus filter parameters"""
-        return random.choice(["all", "1901_au", "1901_nz", "1901_uk"])
+        return random.choice(["all", "darwin"])
     
     def generate_feedback_data(self, qa_id: str, session_id: str, question: str = None, answer: str = None) -> Dict[str, Any]:
         """Generate feedback submission data matching actual UI format exactly"""
