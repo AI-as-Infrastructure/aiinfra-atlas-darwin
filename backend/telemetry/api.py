@@ -12,6 +12,7 @@ from fastapi import APIRouter, Request, HTTPException
 
 from .core import get_tracer, _phoenix_session, PHOENIX_AVAILABLE, is_telemetry_enabled
 from .feedback import UserFeedback, FeedbackResponse, associate_feedback_with_spans
+from .registry import span_registry, mask_redis_url
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,31 @@ async def submit_feedback(feedback: UserFeedback, request: Request):
             message=f"Error processing feedback: {str(e)}",
             status="error"
         )
+
+
+    @router.get("/api/telemetry/registry_status")
+    async def registry_status(session_id: Optional[str] = None):
+        """Debug endpoint to inspect span registry backend and lookups."""
+        status = {
+            "backend": type(span_registry).__name__,
+        }
+        # Add Redis info if available
+        try:
+            if hasattr(span_registry, "_pool"):
+                status["redis_available"] = getattr(span_registry, "_redis_available", False)
+                raw_url = os.getenv("REDIS_URL")
+                status["redis_url"] = mask_redis_url(raw_url) if raw_url else None
+                status["key_prefix"] = getattr(span_registry, "key_prefix", None)
+                status["key_expiry"] = getattr(span_registry, "key_expiry", None)
+        except Exception:
+            pass
+        # Optionally return list of spans for a session
+        if session_id:
+            try:
+                status["spans"] = span_registry.list_spans(session_id)
+            except Exception as e:
+                status["spans_error"] = str(e)
+        return status
 
 
 def register_telemetry_api(app):
