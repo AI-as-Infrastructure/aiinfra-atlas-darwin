@@ -101,7 +101,7 @@ def retrieve_documents(
         List of retrieved documents
     """
     # Determine retriever type and implementation details for telemetry
-    retriever_type = getattr(retriever, "type", search_type) or "unknown"
+    retriever_type = getattr(retriever, "type", search_type)
     retriever_name = type(retriever).__name__
     chroma_search = "Chroma" in retriever_name or hasattr(retriever, "vectorstore") and "Chroma" in type(retriever.vectorstore).__name__
     
