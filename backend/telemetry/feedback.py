@@ -15,12 +15,12 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-async def find_qa_span_id_with_retry(session_id: str, qa_id: str, max_retries: int = 3) -> Optional[str]:
+async def find_qa_span_id_with_retry(session_id: str, qa_id: str, max_retries: int = 5) -> Optional[str]:
     """
     Find span ID with retry logic for development SQLite timing issues.
     In production (Redis), this will succeed on first attempt with minimal overhead.
     """
-    delays = [0.05, 0.1, 0.2]  # 50ms, 100ms, 200ms
+    delays = [0.05, 0.1, 0.2, 0.4, 0.8]  # up to ~1.55s cumulative
     
     for i in range(max_retries):
         span_id = find_qa_span_id(session_id, qa_id)
@@ -725,6 +725,23 @@ async def associate_feedback_with_spans(session_id: str, qa_id: str, feedback_da
             
             qa_span_id = await find_qa_span_id_with_retry(session_id, qa_id)
             if not qa_span_id:
+                # Try final fallback via trace_id if available
+                try:
+                    trace_id = feedback_data.get("trace_id")
+                    if trace_id:
+                        from .spans import find_span_by_trace_id
+                        traced_span_id = find_span_by_trace_id(trace_id)
+                        if traced_span_id:
+                            logger.info(f"Found span via trace_id fallback for session {session_id}, qa_id {qa_id}")
+                            success = submit_span_annotation(traced_span_id, feedback_data, qa_id)
+                            if success:
+                                logger.info(f"Feedback annotation submitted via trace_id for session {session_id}, qa_id {qa_id}")
+                                return True
+                            else:
+                                logger.error(f"Failed to submit feedback via trace_id for session {session_id}, qa_id {qa_id}")
+                                return False
+                except Exception as fe:
+                    logger.debug(f"Trace_id fallback lookup failed: {fe}")
                 logger.error(f"No span ID found for session {session_id}, qa_id {qa_id}")
                 return False
                 

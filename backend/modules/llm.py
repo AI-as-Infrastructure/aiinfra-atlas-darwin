@@ -714,8 +714,18 @@ def generate_response_with_telemetry(
                 otel_kind=SpanKind.INTERNAL
             ) as llm_span:
                 from backend.telemetry.spans import register_span
-                span_id = str(llm_span.get_span_context().span_id)
-                register_span(session_id, qa_id, span_id)
+                # Capture tracer context ids
+                span_context = llm_span.get_span_context()
+                span_id = str(span_context.span_id)
+                trace_id = None
+                try:
+                    # OpenTelemetry trace_id is an int; format to 32-hex if present
+                    from opentelemetry.trace import format_trace_id as otel_format_trace_id
+                    trace_id = otel_format_trace_id(span_context.trace_id)
+                except Exception:
+                    trace_id = None
+                # Register main LLM span with optional trace correlation
+                register_span(session_id, qa_id, span_id, trace_id)
                 logger.info(f"Registered main LLM span with session_id={session_id}, qa_id={qa_id}, span_id={span_id}")
 
                 # Add cache statistics to span
@@ -802,7 +812,14 @@ def generate_response_with_telemetry(
                         kind=OpenInferenceSpanKind.LLM
                     ) as response_span:
                         response_key = f"{qa_id}_response"
-                        register_span(session_id, response_key, str(response_span.get_span_context().span_id))
+                        resp_ctx = response_span.get_span_context()
+                        resp_span_id = str(resp_ctx.span_id)
+                        try:
+                            from opentelemetry.trace import format_trace_id as otel_format_trace_id
+                            resp_trace_id = otel_format_trace_id(resp_ctx.trace_id)
+                        except Exception:
+                            resp_trace_id = trace_id
+                        register_span(session_id, response_key, resp_span_id, resp_trace_id)
 
                 except Exception as generation_error:
                     llm_span.record_exception(generation_error)

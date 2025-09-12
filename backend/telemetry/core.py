@@ -490,16 +490,24 @@ def create_llm_span(session_id: str, qa_id: str, model: str, **kwargs):
             return span
             
         from .spans import register_span
-        from opentelemetry.trace import format_span_id as otel_format_span_id
+        from opentelemetry.trace import (
+            format_span_id as otel_format_span_id,
+            format_trace_id as otel_format_trace_id,
+        )
         if not PHOENIX_AVAILABLE or not _phoenix_session:
             raise RuntimeError("Phoenix telemetry is not available for span registration.")
         
         # Get the span ID as hex string
-        span_id = otel_format_span_id(span.get_span_context().span_id)
+        span_context = span.get_span_context()
+        span_id = otel_format_span_id(span_context.span_id)
+        try:
+            trace_id = otel_format_trace_id(span_context.trace_id)
+        except Exception:
+            trace_id = None
         
         # Register as the main response span for feedback
         # Note: We only register with the response key to avoid duplicate registrations
-        register_span(session_id, f"{qa_id}_response", span_id)
+        register_span(session_id, f"{qa_id}_response", span_id, trace_id)
         return span
     
     @contextmanager
