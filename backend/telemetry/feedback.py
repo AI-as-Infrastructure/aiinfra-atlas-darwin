@@ -184,10 +184,10 @@ def format_faults_list(faults: Dict[str, bool]) -> List[str]:
         return []
     return [fault_type for fault_type, is_present in faults.items() if is_present]
 
-def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None) -> bool:
+async def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None) -> bool:
     """
     Submit feedback as a span annotation to Phoenix using their span annotations API.
-    
+
     Formats the span ID as a 16-character lowercase hexadecimal string as required by Phoenix.
     """
 
@@ -197,75 +197,43 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
     import httpx
     import json
     import logging
-    from time import sleep
 
     logger = logging.getLogger(__name__)
-    
-    
+
+
     # Cannot annotate without a span_id
     if not span_id:
         logger.error("Cannot submit annotation without a valid span_id")
         return False
-        
+
     # Convert span_id to the required 16-character lowercase hexadecimal format
     try:
         # First, try to convert the span_id to an integer if it's a string
         span_id_int = int(span_id) if isinstance(span_id, str) else span_id
-        
+
         # Convert to 16-character lowercase hexadecimal string - this is the format required by Phoenix
         formatted_span_id = format(span_id_int, '016x')
-        
+
     except (ValueError, TypeError) as e:
         logger.warning(f"Failed to convert span_id to hex: {e}. Using original format.")
         formatted_span_id = str(span_id)
-    
-    
+
+
     phoenix_endpoint = os.getenv('PHOENIX_COLLECTOR_ENDPOINT', 'https://app.phoenix.arize.com')
-    # Use synchronous processing to get immediate feedback
+    # Use synchronous processing to get immediate feedback. For POST, use non-project path.
     annotation_endpoint = f"{phoenix_endpoint}/v1/span_annotations?sync=true"
-    
+
     def get_phoenix_headers():
-        client_headers = os.getenv('PHOENIX_CLIENT_HEADERS')
+        """Get headers for Phoenix API calls using Bearer authentication (spaces format)."""
         headers = {"Content-Type": "application/json"}
-        
-        # Try the direct Phoenix API key approach first
+
+        # Use PHOENIX_API_KEY with Bearer authentication
         phoenix_api_key = os.getenv('PHOENIX_API_KEY')
         if phoenix_api_key:
-            # Remove 'api_key=' prefix if present
-            if phoenix_api_key.startswith('api_key='):
-                phoenix_api_key = phoenix_api_key[8:]
-            headers['api_key'] = phoenix_api_key
+            headers['Authorization'] = f'Bearer {phoenix_api_key}'
             return headers
-        
-        # For Arize Cloud, use PHOENIX_CLIENT_HEADERS (contains api_key)
-        if client_headers:
-            try:
-                # Check if client_headers starts with 'api_key='
-                if client_headers.startswith('api_key='):
-                    # Extract the actual key (remove 'api_key=' prefix)
-                    api_key_value = client_headers[8:]
-                    headers['api_key'] = api_key_value
-                    return headers
-                    
-                # Check if it's in key:value format (like '71c89f6ab6b6dafbb51:a61f175')
-                if ':' in client_headers and not client_headers.startswith('{'):
-                    headers['api_key'] = client_headers
-                    return headers
-                    
-                # Or it might be JSON formatted
-                import json
-                headers_dict = json.loads(client_headers)
-                if 'api_key' in headers_dict:
-                    headers['api_key'] = headers_dict['api_key']
-                    return headers
-            except json.JSONDecodeError:
-                # Not JSON, likely a direct api_key
-                headers['api_key'] = client_headers
-                return headers
-            except Exception as e:
-                logger.error(f"Error processing PHOENIX_CLIENT_HEADERS: {e}")
-        
-        logger.warning("No Phoenix API key found - annotation may fail")
+
+        logger.warning("Phoenix authentication not configured — annotation will fail")
         return headers
 
     # Get authentication headers
@@ -662,22 +630,22 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
     # Convert to JSON for logging and sending
     payload_json = json.dumps(payload)
     
-    # Submit the annotation
+    # Submit the annotation using async httpx for concurrent user support
     try:
-        response = httpx.post(
-            annotation_endpoint,
-            headers=headers,
-            json=payload,
-            timeout=30.0  # Use a longer timeout
-        )
-        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                annotation_endpoint,
+                headers=headers,
+                json=payload,
+            )
+
         if response.status_code == 200:
             logger.info(f"Successfully submitted annotation for span {span_id}")
             return True
         else:
             # Redact secrets and avoid logging full payload
             try:
-                redacted_headers = {k: ('***' if k.lower() == 'api_key' else v) for k, v in headers.items()}
+                redacted_headers = {k: ('***' if k.lower() in ('authorization', 'api_key') else v) for k, v in headers.items()}
                 logger.error(f"Failed to submit annotation: {response.status_code}")
                 logger.error(f"Headers used (redacted): {redacted_headers}")
             except (NameError, UnboundLocalError):
@@ -689,7 +657,7 @@ def submit_span_annotation(span_id: str, feedback_data: dict, qa_id: str = None)
         logger.error(f"Attempted endpoint: {annotation_endpoint}")
         # Only log headers if they exist and are accessible
         try:
-            redacted_headers = {k: ('***' if k.lower() == 'api_key' else v) for k, v in headers.items()}
+            redacted_headers = {k: ('***' if k.lower() in ('authorization', 'api_key') else v) for k, v in headers.items()}
             logger.error(f"Headers (redacted): {redacted_headers}")
         except (NameError, UnboundLocalError):
             logger.error("Headers not available for logging")
@@ -710,9 +678,9 @@ async def associate_feedback_with_spans(session_id: str, qa_id: str, feedback_da
         response_span_id = await find_qa_span_id_with_retry(session_id, response_key)
         
         if response_span_id:
-            
+
             # Submit annotation to Phoenix using the response span
-            success = submit_span_annotation(response_span_id, feedback_data, qa_id)
+            success = await submit_span_annotation(response_span_id, feedback_data, qa_id)
             if success:
                 logger.info(f"Feedback annotation submitted to response span for session {session_id}, qa_id {qa_id}")
                 return True
@@ -733,7 +701,7 @@ async def associate_feedback_with_spans(session_id: str, qa_id: str, feedback_da
                         traced_span_id = find_span_by_trace_id(trace_id)
                         if traced_span_id:
                             logger.info(f"Found span via trace_id fallback for session {session_id}, qa_id {qa_id}")
-                            success = submit_span_annotation(traced_span_id, feedback_data, qa_id)
+                            success = await submit_span_annotation(traced_span_id, feedback_data, qa_id)
                             if success:
                                 logger.info(f"Feedback annotation submitted via trace_id for session {session_id}, qa_id {qa_id}")
                                 return True
@@ -746,7 +714,7 @@ async def associate_feedback_with_spans(session_id: str, qa_id: str, feedback_da
                 return False
                 
             # Submit annotation to Phoenix using the QA span as fallback
-            success = submit_span_annotation(qa_span_id, feedback_data, qa_id)
+            success = await submit_span_annotation(qa_span_id, feedback_data, qa_id)
             if success:
                 logger.info(f"Feedback annotation submitted to QA span for session {session_id}, qa_id {qa_id}")
                 return True

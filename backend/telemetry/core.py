@@ -130,7 +130,7 @@ def initialize_telemetry() -> bool:
 
     try:
         # Set OTEL environment variables for Phoenix Arize Cloud
-        # According to Phoenix docs, use OTEL_EXPORTER_OTLP_HEADERS with api_key (underscore)
+        # Uses Bearer token authentication with Phoenix Spaces API
         os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] = f"{phoenix_endpoint}/v1/traces"
         os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = phoenix_client_headers
         os.environ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "http/protobuf"
@@ -277,20 +277,28 @@ def is_telemetry_enabled(request=None) -> bool:
 def set_user_telemetry_preference(request) -> bool:
     """
     Set user telemetry preference based on request headers.
-    
+
+    Uses X-Telemetry-Opt-In header as the explicit opt-in signal.
+    Falls back to X-Trace-Id presence for backward compatibility.
+
     Args:
         request: FastAPI request object
-        
+
     Returns:
         bool: True if user has enabled telemetry, False if privacy is enabled
     """
-    # Check if user has sent telemetry headers (privacy off) or not (privacy on)
-    trace_id = getattr(request, 'headers', {}).get("X-Trace-Id")
-    user_enabled = bool(trace_id)
-    
+    headers = getattr(request, 'headers', {})
+    # Explicit opt-in header takes priority
+    opt_in = headers.get("X-Telemetry-Opt-In")
+    if opt_in is not None:
+        user_enabled = opt_in.lower() in ("true", "1", "yes")
+    else:
+        # Backward compat: presence of X-Trace-Id implies opt-in
+        user_enabled = bool(headers.get("X-Trace-Id"))
+
     # Set in context variable for this request
     _user_telemetry_enabled.set(user_enabled)
-    
+
     return user_enabled
 
 from opentelemetry.trace import SpanKind
@@ -596,11 +604,9 @@ def create_feedback_span(session_id: str, qa_id: str, feedback_data: Dict[str, A
 
 async def log_user_feedback(session_id: str, qa_id: str, feedback_data: Dict[str, Any]) -> bool:
     """Log user feedback by associating it with the appropriate span."""
-    logger.info(f"CORE: log_user_feedback called with session_id={session_id}, qa_id={qa_id}")
-    logger.info(f"CORE: feedback_data keys: {list(feedback_data.keys())}")
-    logger.info(f"CORE: sentiment in feedback_data: {'sentiment' in feedback_data}")
-    logger.info(f"CORE: sentiment value: {feedback_data.get('sentiment')}")
-    
+    logger.debug(f"CORE: log_user_feedback called with session_id={session_id}, qa_id={qa_id}")
+    logger.debug(f"CORE: feedback_data keys: {list(feedback_data.keys())}")
+
     if not is_telemetry_enabled():
         logger.info("Telemetry disabled - skipping feedback logging")
         return True  # Return True to indicate "success" even when disabled

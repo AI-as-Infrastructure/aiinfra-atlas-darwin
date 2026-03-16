@@ -2,7 +2,7 @@
 fastapi==0.115.12
 uvicorn[standard]==0.34.2
 gunicorn==23.0.0
-python-multipart==0.0.20
+python-multipart==0.0.22
 websockets==15.0.1
 
 # Vector Search Support
@@ -10,9 +10,9 @@ chromadb==1.0.15
 langchain-chroma==0.2.4
 
 # LLM & LangChain Dependencies
-langchain==0.3.25
-langchain-community==0.3.23
-langchain-core==0.3.66
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-core>=0.3.81,<1.0.0
 langchain-huggingface==0.2.0
 langchain-openai==0.3.16
 langchain-ollama==0.3.2
@@ -27,9 +27,9 @@ sounddevice==0.5.1
 google-auth==2.40.1
 
 # AI/ML Model Dependencies
-transformers==4.52.1
-torch==2.7.1
-unstructured==0.17.2
+transformers==4.53.0
+torch>=2.8.0
+unstructured==0.18.18
 
 # Utilities
 python-dotenv==1.1.0
@@ -50,11 +50,11 @@ pydantic==2.11.4
 pydantic-compat==0.1.2
 lark==1.2.2
 
-# Observability
-arize-phoenix==10.7.0
-arize-phoenix-client==1.10.0
+# Observability - Updated to Phoenix SDK v12.9.0 for Spaces API and annotation export support
+arize-phoenix==12.9.0
+arize-phoenix-client==1.21.0
 arize-phoenix-otel==0.10.3
-arize-phoenix-evals==0.20.8
+arize-phoenix-evals==2.5.0
 openinference-instrumentation-langchain==0.1.43
 opentelemetry-exporter-otlp==1.34.0
 opentelemetry-sdk==1.34.0
@@ -64,8 +64,8 @@ pandas>=1.5.0,<3.0.0
 # ---
 # Additional requirements for create/create_hansard_store.py
 # These are needed for standalone execution of the Hansard vector store creation script.
-nltk==3.9.1
-langchain-text-splitters==0.3.8
+nltk==3.9.3
+langchain-text-splitters==0.3.9
 tqdm==4.67.1
 rank-bm25==0.2.2
 beautifulsoup4==4.12.3
